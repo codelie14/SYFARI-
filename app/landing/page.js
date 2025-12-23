@@ -1,0 +1,577 @@
+'use client';
+
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Check, Users, Wallet, TrendingUp, Shield, Bell, Vote, BarChart3, Clock, Smartphone, Globe, ArrowRight, Star, ChevronRight } from 'lucide-react';
+import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
+
+export default function LandingPage() {
+  const router = useRouter();
+  const [authMode, setAuthMode] = useState('login');
+  const [loading, setLoading] = useState(false);
+  const [authData, setAuthData] = useState({
+    email: '',
+    password: '',
+    nom: '',
+    prenom: '',
+    telephone: ''
+  });
+
+  const handleAuth = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const endpoint = authMode === 'login' ? '/api/auth/login' : '/api/auth/register';
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(authData)
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        localStorage.setItem('token', data.token);
+        toast.success(authMode === 'login' ? 'Connexion réussie !' : 'Inscription réussie !');
+        router.push('/');
+      } else {
+        toast.error(data.error || 'Erreur d\'authentification');
+      }
+    } catch (error) {
+      toast.error('Erreur de connexion');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const scrollToAuth = () => {
+    document.getElementById('auth-section').scrollIntoView({ behavior: 'smooth' });
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      {/* Hero Section */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-orange-500 via-orange-600 to-blue-900">
+        <div className="absolute inset-0 bg-black/10"></div>
+        <div className="container mx-auto px-4 py-20 relative z-10">
+          <div className="flex items-center justify-between mb-12">
+            <div className="flex items-center gap-3">
+              <img 
+                src="https://customer-assets.emergentagent.com/job_c313cba5-f4b8-4c93-8785-8b0a73fb5d88/artifacts/3e40kvb8_66912436-e009-4eed-9984-782b74918776.jpg" 
+                alt="SYFARI Logo" 
+                className="w-16 h-16 rounded-full border-4 border-white shadow-lg"
+              />
+              <h1 className="text-3xl font-bold text-white">SYFARI</h1>
+            </div>
+            <Button onClick={scrollToAuth} variant="outline" className="bg-white text-orange-600 hover:bg-orange-50">
+              Se connecter
+            </Button>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div className="text-white">
+              <Badge className="mb-6 bg-white/20 text-white border-white/30 px-4 py-1">
+                🚀 La solution #1 en Afrique francophone
+              </Badge>
+              <h2 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
+                Gérez vos tontines en toute transparence
+              </h2>
+              <p className="text-xl mb-8 text-white/90">
+                SYFARI digitalise la gestion de vos groupes d'épargne collaborative. Simple, sécurisé et 100% transparent.
+              </p>
+              <div className="flex flex-wrap gap-4">
+                <Button size="lg" onClick={scrollToAuth} className="bg-white text-orange-600 hover:bg-orange-50">
+                  Commencer gratuitement
+                  <ArrowRight className="ml-2 w-5 h-5" />
+                </Button>
+                <Button size="lg" variant="outline" className="bg-transparent border-2 border-white text-white hover:bg-white/10">
+                  Voir la démo
+                </Button>
+              </div>
+
+              <div className="mt-12 grid grid-cols-3 gap-6">
+                <div>
+                  <div className="text-3xl font-bold">500+</div>
+                  <div className="text-white/80">Groupes actifs</div>
+                </div>
+                <div>
+                  <div className="text-3xl font-bold">5000+</div>
+                  <div className="text-white/80">Utilisateurs</div>
+                </div>
+                <div>
+                  <div className="text-3xl font-bold">99%</div>
+                  <div className="text-white/80">Satisfaction</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="relative">
+              <div className="bg-white rounded-2xl shadow-2xl p-8">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4 p-4 bg-green-50 rounded-lg border border-green-200">
+                    <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center text-white">
+                      <TrendingUp className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <div className="font-semibold text-green-900">Cotisation reçue</div>
+                      <div className="text-sm text-green-700">+10,000 F CFA</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center text-white">
+                      <Users className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <div className="font-semibold text-blue-900">Nouveau membre</div>
+                      <div className="text-sm text-blue-700">Aya a rejoint le groupe</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 p-4 bg-orange-50 rounded-lg border border-orange-200">
+                    <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center text-white">
+                      <Bell className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <div className="font-semibold text-orange-900">Rappel automatique</div>
+                      <div className="text-sm text-orange-700">Cotisation à venir</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section className="py-20">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <Badge className="mb-4 bg-orange-100 text-orange-700 border-orange-200">
+              Fonctionnalités
+            </Badge>
+            <h2 className="text-4xl font-bold mb-4">Tout ce dont vous avez besoin</h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Une plateforme complète pour digitaliser et sécuriser la gestion de vos tontines
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            <Card className="border-2 hover:border-orange-200 transition-all hover:shadow-lg">
+              <CardHeader>
+                <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mb-4">
+                  <Wallet className="w-6 h-6 text-orange-600" />
+                </div>
+                <CardTitle>Gestion des cotisations</CardTitle>
+                <CardDescription>
+                  Suivez toutes les cotisations en temps réel avec historique complet et rapports détaillés
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="border-2 hover:border-blue-200 transition-all hover:shadow-lg">
+              <CardHeader>
+                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+                  <Users className="w-6 h-6 text-blue-600" />
+                </div>
+                <CardTitle>Gestion des membres</CardTitle>
+                <CardDescription>
+                  Ajoutez, gérez et suivez tous vos membres facilement avec des rôles personnalisés
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="border-2 hover:border-green-200 transition-all hover:shadow-lg">
+              <CardHeader>
+                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
+                  <Shield className="w-6 h-6 text-green-600" />
+                </div>
+                <CardTitle>100% Sécurisé</CardTitle>
+                <CardDescription>
+                  Vos données sont cryptées et protégées avec les meilleurs standards de sécurité
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="border-2 hover:border-purple-200 transition-all hover:shadow-lg">
+              <CardHeader>
+                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
+                  <Bell className="w-6 h-6 text-purple-600" />
+                </div>
+                <CardTitle>Rappels automatiques</CardTitle>
+                <CardDescription>
+                  Recevez des notifications SMS et email pour ne jamais oublier une cotisation
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="border-2 hover:border-pink-200 transition-all hover:shadow-lg">
+              <CardHeader>
+                <div className="w-12 h-12 bg-pink-100 rounded-lg flex items-center justify-center mb-4">
+                  <Vote className="w-6 h-6 text-pink-600" />
+                </div>
+                <CardTitle>Système de vote</CardTitle>
+                <CardDescription>
+                  Prenez des décisions démocratiques avec un système de vote intégré et transparent
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="border-2 hover:border-yellow-200 transition-all hover:shadow-lg">
+              <CardHeader>
+                <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center mb-4">
+                  <BarChart3 className="w-6 h-6 text-yellow-600" />
+                </div>
+                <CardTitle>Tableaux de bord</CardTitle>
+                <CardDescription>
+                  Visualisez vos statistiques et l'évolution de votre groupe en un coup d'œil
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Benefits Section */}
+      <section className="py-20 bg-gradient-to-br from-orange-50 to-blue-50">
+        <div className="container mx-auto px-4">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div>
+              <Badge className="mb-4 bg-orange-100 text-orange-700 border-orange-200">
+                Pourquoi SYFARI ?
+              </Badge>
+              <h2 className="text-4xl font-bold mb-6">Terminé les cahiers et les erreurs de calcul</h2>
+              <p className="text-lg text-gray-600 mb-8">
+                SYFARI remplace les méthodes traditionnelles par une solution moderne, automatisée et transparente.
+              </p>
+
+              <div className="space-y-4">
+                <div className="flex items-start gap-4">
+                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Check className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg mb-1">Zéro erreur de calcul</h3>
+                    <p className="text-gray-600">Tous les calculs sont automatiques et vérifiés</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Check className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg mb-1">Transparence totale</h3>
+                    <p className="text-gray-600">Tous les membres voient l'historique complet</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Check className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg mb-1">Gain de temps</h3>
+                    <p className="text-gray-600">Plus besoin de tout noter manuellement</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Check className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg mb-1">Accessible partout</h3>
+                    <p className="text-gray-600">Sur mobile, tablette ou ordinateur</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-6">
+              <Card className="bg-white">
+                <CardHeader>
+                  <Clock className="w-8 h-8 text-orange-500 mb-2" />
+                  <CardTitle className="text-2xl">90%</CardTitle>
+                  <CardDescription>
+                    Des cotisations payées à temps grâce aux rappels automatiques
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+
+              <Card className="bg-white mt-8">
+                <CardHeader>
+                  <Smartphone className="w-8 h-8 text-blue-500 mb-2" />
+                  <CardTitle className="text-2xl">100%</CardTitle>
+                  <CardDescription>
+                    Mobile-first pour une utilisation facile partout
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+
+              <Card className="bg-white">
+                <CardHeader>
+                  <Shield className="w-8 h-8 text-green-500 mb-2" />
+                  <CardTitle className="text-2xl">0%</CardTitle>
+                  <CardDescription>
+                    De fraude grâce à la transparence totale
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+
+              <Card className="bg-white mt-8">
+                <CardHeader>
+                  <Globe className="w-8 h-8 text-purple-500 mb-2" />
+                  <CardTitle className="text-2xl">24/7</CardTitle>
+                  <CardDescription>
+                    Accès permanent à vos données en temps réel
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section className="py-20">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <Badge className="mb-4 bg-orange-100 text-orange-700 border-orange-200">
+              Témoignages
+            </Badge>
+            <h2 className="text-4xl font-bold mb-4">Ce que disent nos utilisateurs</h2>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            <Card className="bg-white">
+              <CardHeader>
+                <div className="flex gap-1 mb-4">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                  ))}
+                </div>
+                <CardDescription className="text-base">
+                  "SYFARI a transformé la gestion de notre tontine familiale. Plus de disputes, tout est clair et transparent !"
+                </CardDescription>
+                <div className="mt-4">
+                  <p className="font-semibold">Aya Kouassi</p>
+                  <p className="text-sm text-gray-500">Responsable, Tontine Familiale</p>
+                </div>
+              </CardHeader>
+            </Card>
+
+            <Card className="bg-white">
+              <CardHeader>
+                <div className="flex gap-1 mb-4">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                  ))}
+                </div>
+                <CardDescription className="text-base">
+                  "Enfin une solution moderne pour nos associations ! Les rappels automatiques ont tout changé."
+                </CardDescription>
+                <div className="mt-4">
+                  <p className="font-semibold">Kouadio Jean</p>
+                  <p className="text-sm text-gray-500">Président, Association des Jeunes</p>
+                </div>
+              </CardHeader>
+            </Card>
+
+            <Card className="bg-white">
+              <CardHeader>
+                <div className="flex gap-1 mb-4">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                  ))}
+                </div>
+                <CardDescription className="text-base">
+                  "Simple, efficace et sécurisé. Je recommande SYFARI à tous les groupes d'épargne !"
+                </CardDescription>
+                <div className="mt-4">
+                  <p className="font-semibold">Fatou Traoré</p>
+                  <p className="text-sm text-gray-500">Membre, Tontine des Femmes</p>
+                </div>
+              </CardHeader>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Auth Section */}
+      <section id="auth-section" className="py-20 bg-gradient-to-br from-gray-50 to-white">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="text-4xl font-bold mb-4">Commencez dès aujourd'hui</h2>
+              <p className="text-xl text-gray-600">Créez votre compte gratuitement en moins de 2 minutes</p>
+            </div>
+
+            <Card className="shadow-2xl">
+              <CardContent className="p-8">
+                <Tabs value={authMode} onValueChange={setAuthMode}>
+                  <TabsList className="grid w-full grid-cols-2 mb-6">
+                    <TabsTrigger value="register">Inscription</TabsTrigger>
+                    <TabsTrigger value="login">Connexion</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="register">
+                    <form onSubmit={handleAuth} className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="nom">Nom</Label>
+                          <Input
+                            id="nom"
+                            placeholder="Nom"
+                            value={authData.nom}
+                            onChange={(e) => setAuthData({ ...authData, nom: e.target.value })}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="prenom">Prénom</Label>
+                          <Input
+                            id="prenom"
+                            placeholder="Prénom"
+                            value={authData.prenom}
+                            onChange={(e) => setAuthData({ ...authData, prenom: e.target.value })}
+                            required
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="telephone">Téléphone</Label>
+                        <Input
+                          id="telephone"
+                          type="tel"
+                          placeholder="+225 XX XX XX XX XX"
+                          value={authData.telephone}
+                          onChange={(e) => setAuthData({ ...authData, telephone: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="email-register">Email</Label>
+                        <Input
+                          id="email-register"
+                          type="email"
+                          placeholder="votre@email.com"
+                          value={authData.email}
+                          onChange={(e) => setAuthData({ ...authData, email: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="password-register">Mot de passe</Label>
+                        <Input
+                          id="password-register"
+                          type="password"
+                          placeholder="••••••••"
+                          value={authData.password}
+                          onChange={(e) => setAuthData({ ...authData, password: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <Button type="submit" className="w-full bg-orange-500 hover:bg-orange-600" size="lg" disabled={loading}>
+                        {loading ? 'Inscription...' : 'S\'inscrire gratuitement'}
+                        <ArrowRight className="ml-2 w-5 h-5" />
+                      </Button>
+                    </form>
+                  </TabsContent>
+
+                  <TabsContent value="login">
+                    <form onSubmit={handleAuth} className="space-y-4">
+                      <div>
+                        <Label htmlFor="email">Email</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          placeholder="votre@email.com"
+                          value={authData.email}
+                          onChange={(e) => setAuthData({ ...authData, email: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="password">Mot de passe</Label>
+                        <Input
+                          id="password"
+                          type="password"
+                          placeholder="••••••••"
+                          value={authData.password}
+                          onChange={(e) => setAuthData({ ...authData, password: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <Button type="submit" className="w-full bg-orange-500 hover:bg-orange-600" size="lg" disabled={loading}>
+                        {loading ? 'Connexion...' : 'Se connecter'}
+                        <ArrowRight className="ml-2 w-5 h-5" />
+                      </Button>
+                    </form>
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-gray-900 text-white py-12">
+        <div className="container mx-auto px-4">
+          <div className="grid md:grid-cols-4 gap-8">
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <img 
+                  src="https://customer-assets.emergentagent.com/job_c313cba5-f4b8-4c93-8785-8b0a73fb5d88/artifacts/3e40kvb8_66912436-e009-4eed-9984-782b74918776.jpg" 
+                  alt="SYFARI" 
+                  className="w-10 h-10 rounded-full"
+                />
+                <span className="text-xl font-bold">SYFARI</span>
+              </div>
+              <p className="text-gray-400">
+                La plateforme de gestion de tontines la plus simple et sécurisée d'Afrique.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="font-semibold mb-4">Produit</h3>
+              <ul className="space-y-2 text-gray-400">
+                <li><a href="#" className="hover:text-white">Fonctionnalités</a></li>
+                <li><a href="#" className="hover:text-white">Tarifs</a></li>
+                <li><a href="#" className="hover:text-white">FAQ</a></li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="font-semibold mb-4">Entreprise</h3>
+              <ul className="space-y-2 text-gray-400">
+                <li><a href="#" className="hover:text-white">À propos</a></li>
+                <li><a href="#" className="hover:text-white">Blog</a></li>
+                <li><a href="#" className="hover:text-white">Contact</a></li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="font-semibold mb-4">Contact</h3>
+              <ul className="space-y-2 text-gray-400">
+                <li>archangeyatte@gmail.com</li>
+                <li>+225 07 11 45 48 41</li>
+                <li>Abidjan, Côte d'Ivoire</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
+            <p>© 2025 SYFARI - Tous droits réservés</p>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
