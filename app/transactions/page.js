@@ -14,24 +14,7 @@ export default function TransactionsPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('all')
-
-  const transactions = [
-    { id: 1, date: '2024-01-15', groupe: 'Tontine Familiale', membre: 'Jean Kouadio', type: 'cotisation', montant: 50000, statut: 'completed', icon: '💵' },
-    { id: 2, date: '2024-01-15', groupe: 'Association des Jeunes', membre: 'Aya Kouassi', type: 'cotisation', montant: 100000, statut: 'completed', icon: '💵' },
-    { id: 3, date: '2024-01-14', groupe: 'Tontine Familiale', membre: 'Fatou Traoré', type: 'cotisation', montant: 50000, statut: 'completed', icon: '💵' },
-    { id: 4, date: '2024-01-13', groupe: 'Tontine des Femmes', membre: 'Marc Dubois', type: 'retrait', montant: 300000, statut: 'pending', icon: '📤' },
-    { id: 5, date: '2024-01-12', groupe: 'Association des Jeunes', membre: 'Sophie Martin', type: 'cotisation', montant: 100000, statut: 'completed', icon: '💵' },
-    { id: 6, date: '2024-01-11', groupe: 'Tontine Familiale', membre: 'Pierre Dupont', type: 'pénalité', montant: 10000, statut: 'completed', icon: '⚠️' },
-    { id: 7, date: '2024-01-10', groupe: 'Tontine des Femmes', membre: 'Agathe Martin', type: 'remboursement', montant: 50000, statut: 'completed', icon: '↩️' },
-    { id: 8, date: '2024-01-09', groupe: 'Association des Jeunes', membre: 'Jean Paul', type: 'cotisation', montant: 100000, statut: 'completed', icon: '💵' },
-  ]
-
-  const stats = [
-    { label: 'Total reçu', value: '650,000 F', icon: '💰', color: 'bg-green-100 text-green-600' },
-    { label: 'Total retiré', value: '300,000 F', icon: '📤', color: 'bg-blue-100 text-blue-600' },
-    { label: 'En attente', value: '2 transactions', icon: '⏳', color: 'bg-yellow-100 text-yellow-600' },
-    { label: 'Pénalités', value: '10,000 F', icon: '⚠️', color: 'bg-red-100 text-red-600' },
-  ]
+  const [transactions, setTransactions] = useState([])
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -39,18 +22,81 @@ export default function TransactionsPage() {
       router.push('/landing')
       return
     }
-    setTimeout(() => {
-      setLoading(false)
-    }, 500)
+    loadTransactions()
   }, [router])
+
+  const loadTransactions = async () => {
+    try {
+      setLoading(true)
+      const token = localStorage.getItem('token')
+      const res = await fetch('/api/transactions', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = res.ok ? await res.json() : []
+      setTransactions(Array.isArray(data) ? data : [])
+    } catch (error) {
+      setTransactions([])
+    } finally {
+      setLoading(false)
+    }
+  }
 
   if (loading) return <Loader text="Chargement des transactions..." />
 
+  const formatDate = (value) => {
+    if (!value) return '—'
+    const d = new Date(value)
+    return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString('fr-FR')
+  }
+
+  const getIcon = (type) => {
+    switch (type) {
+      case 'cotisation': return '💵'
+      case 'retrait': return '📤'
+      case 'pénalité': return '⚠️'
+      case 'remboursement': return '↩️'
+      default: return '📊'
+    }
+  }
+
+  const normalizedTransactions = transactions.map((tx) => {
+    const statut = tx.statut === 'valide' || tx.statut === 'completed' ? 'completed' : 'pending'
+    return {
+      id: tx.id,
+      date: formatDate(tx.date_transaction),
+      groupe: tx.groupe_nom || '—',
+      membre: `${tx.membre_prenom || ''} ${tx.membre_nom || ''}`.trim() || '—',
+      type: tx.type || '—',
+      montant: Number(tx.montant || 0),
+      statut,
+      icon: getIcon(tx.type),
+    }
+  })
+
+  const totalRecu = normalizedTransactions
+    .filter((t) => t.type === 'cotisation')
+    .reduce((sum, t) => sum + t.montant, 0)
+  const totalRetire = normalizedTransactions
+    .filter((t) => t.type === 'retrait')
+    .reduce((sum, t) => sum + t.montant, 0)
+  const enAttente = normalizedTransactions.filter((t) => t.statut !== 'completed').length
+  const totalPenalites = normalizedTransactions
+    .filter((t) => t.type === 'pénalité')
+    .reduce((sum, t) => sum + t.montant, 0)
+
+  const stats = [
+    { label: 'Total reçu', value: `${totalRecu.toLocaleString()} F`, icon: '💰', color: 'bg-green-100 text-green-600' },
+    { label: 'Total retiré', value: `${totalRetire.toLocaleString()} F`, icon: '📤', color: 'bg-blue-100 text-blue-600' },
+    { label: 'En attente', value: `${enAttente} transaction${enAttente !== 1 ? 's' : ''}`, icon: '⏳', color: 'bg-yellow-100 text-yellow-600' },
+    { label: 'Pénalités', value: `${totalPenalites.toLocaleString()} F`, icon: '⚠️', color: 'bg-red-100 text-red-600' },
+  ]
+
   const filteredTransactions = transactions.filter(tx => {
     const matchesSearch = search === '' || 
-      tx.groupe.toLowerCase().includes(search.toLowerCase()) ||
-      tx.membre.toLowerCase().includes(search.toLowerCase())
-    const matchesFilter = filter === 'all' || tx.type === filter || tx.statut === filter
+      (tx.groupe_nom || '').toLowerCase().includes(search.toLowerCase()) ||
+      (`${tx.membre_prenom || ''} ${tx.membre_nom || ''}`).toLowerCase().includes(search.toLowerCase())
+    const normalizedStatus = tx.statut === 'valide' || tx.statut === 'completed' ? 'completed' : 'pending'
+    const matchesFilter = filter === 'all' || tx.type === filter || normalizedStatus === filter
     return matchesSearch && matchesFilter
   })
 
@@ -154,19 +200,19 @@ export default function TransactionsPage() {
                 {filteredTransactions.length > 0 ? (
                   filteredTransactions.map((tx) => (
                     <tr key={tx.id} className="border-b hover:bg-gray-50 transition">
-                      <td className="px-6 py-4 text-sm">{tx.date}</td>
-                      <td className="px-6 py-4 text-sm font-semibold">{tx.groupe}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{tx.membre}</td>
+                      <td className="px-6 py-4 text-sm">{formatDate(tx.date_transaction)}</td>
+                      <td className="px-6 py-4 text-sm font-semibold">{tx.groupe_nom || '—'}</td>
+                      <td className="px-6 py-4 text-sm text-gray-600">{`${tx.membre_prenom || ''} ${tx.membre_nom || ''}`.trim() || '—'}</td>
                       <td className="px-6 py-4 text-sm">
                         <div className="flex items-center gap-2">
-                          <span className="text-lg">{tx.icon}</span>
-                          <span className="capitalize">{tx.type}</span>
+                          <span className="text-lg">{getIcon(tx.type)}</span>
+                          <span className="capitalize">{tx.type || '—'}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm font-bold text-orange-600">{tx.montant.toLocaleString()} F</td>
+                      <td className="px-6 py-4 text-sm font-bold text-orange-600">{Number(tx.montant || 0).toLocaleString()} F</td>
                       <td className="px-6 py-4 text-sm">
-                        <Badge className={getStatusColor(tx.statut)}>
-                          {tx.statut === 'completed' ? 'Complétée' : 'En attente'}
+                        <Badge className={getStatusColor(tx.statut === 'valide' || tx.statut === 'completed' ? 'completed' : 'pending')}>
+                          {tx.statut === 'valide' || tx.statut === 'completed' ? 'Validée' : 'En attente'}
                         </Badge>
                       </td>
                     </tr>

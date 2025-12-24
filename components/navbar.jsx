@@ -75,6 +75,8 @@ export default function NavBar() {
     { href: '/about', label: 'À propos' },
     { href: '/pricing', label: 'Tarifs' },
     { href: '/faq', label: 'FAQ' },
+    { href: '/blog', label: 'Blog' },
+    { href: '/contact', label: 'Contact' },
   ]
 
   const protectedLinks = [

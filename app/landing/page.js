@@ -440,8 +440,10 @@ export default function LandingPage() {
               <h3 className="font-semibold mb-4">Entreprise</h3>
               <ul className="space-y-2 text-gray-400">
                 <li><a href="/about" className="hover:text-white">À propos</a></li>
-                <li><a href="#" className="hover:text-white">Blog</a></li>
-                <li><a href="#" className="hover:text-white">Contact</a></li>
+                <li><a href="/blog" className="hover:text-white">Blog</a></li>
+                <li><a href="/contact" className="hover:text-white">Contact</a></li>
+                <li><a href="/cgv" className="hover:text-white">CGV</a></li>
+                <li><a href="/policy" className="hover:text-white">Confidentialité</a></li>
               </ul>
             </div>
 
