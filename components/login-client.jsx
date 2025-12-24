@@ -1,11 +1,11 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react'
 import Link from 'next/link'
 
-function LoginInner() {
+export default function LoginClient() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [isLogin, setIsLogin] = useState(true)
@@ -57,7 +57,7 @@ function LoginInner() {
         const plan = localStorage.getItem('plan')
         router.push(plan ? '/dashboard' : '/pricing?onboarding=1&next=%2Fdashboard')
       } else {
-        alert(data.error || 'Erreur d\'authentification')
+        alert(data.error || "Erreur d'authentification")
       }
     } catch (error) {
       alert('Erreur de connexion au serveur')
@@ -69,7 +69,6 @@ function LoginInner() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-blue-50 flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
-        {/* Logo */}
         <div className="text-center mb-8 animate-in fade-in slide-in-from-top-4 duration-500">
           <img
             src="/assets/img/logo-syfari.jpg"
@@ -80,9 +79,7 @@ function LoginInner() {
           <p className="text-gray-600 mt-2">Gestion digitale des tontines</p>
         </div>
 
-        {/* Card */}
         <div className="bg-white rounded-2xl shadow-xl p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          {/* Tabs */}
           <div className="flex gap-2 mb-8">
             <button
               onClick={() => setIsLogin(true)}
@@ -106,7 +103,6 @@ function LoginInner() {
             </button>
           </div>
 
-          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
               <>
@@ -147,7 +143,6 @@ function LoginInner() {
               </>
             )}
 
-            {/* Email */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
               <div className="relative">
@@ -163,7 +158,6 @@ function LoginInner() {
               </div>
             </div>
 
-            {/* Password */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Mot de passe</label>
               <div className="relative">
@@ -186,7 +180,6 @@ function LoginInner() {
               </div>
             </div>
 
-            {/* Submit Button */}
             <button
               type="submit"
               disabled={loading}
@@ -206,14 +199,12 @@ function LoginInner() {
             </button>
           </form>
 
-          {/* Divider */}
           <div className="my-6 flex items-center gap-3">
             <div className="flex-1 h-px bg-gray-200"></div>
             <span className="text-sm text-gray-500">ou</span>
             <div className="flex-1 h-px bg-gray-200"></div>
           </div>
 
-          {/* Demo Button */}
           <button
             onClick={() => {
               setFormData({
@@ -230,7 +221,6 @@ function LoginInner() {
           </button>
         </div>
 
-        {/* Footer */}
         <p className="text-center text-gray-600 text-sm mt-6">
           {isLogin ? 'Pas encore de compte ? ' : 'Déjà inscrit ? '}
           <button
@@ -241,7 +231,6 @@ function LoginInner() {
           </button>
         </p>
 
-        {/* Links */}
         <div className="mt-6 flex justify-center gap-4 text-sm">
           <Link href="/landing" className="text-gray-600 hover:text-orange-600 transition">
             Retour à l'accueil
@@ -252,10 +241,3 @@ function LoginInner() {
   )
 }
 
-export default function LoginPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center px-4 text-gray-600">Chargement...</div>}>
-      <LoginInner />
-    </Suspense>
-  )
-}

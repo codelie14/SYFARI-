@@ -345,6 +345,94 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <section className="py-20 bg-white">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <Badge className="mb-4 bg-blue-100 text-blue-700 border-blue-200">
+              Tarifs
+            </Badge>
+            <h2 className="text-4xl font-bold mb-4">Un plan pour chaque groupe</h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Démarrez simplement, puis évoluez au rythme de votre communauté. Le choix du forfait se fait en quelques secondes.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            <Card className="border-2 hover:border-orange-200 transition-all hover:shadow-lg">
+              <CardHeader>
+                <CardTitle>Basique</CardTitle>
+                <CardDescription>Jusqu'à 10 membres</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="text-3xl font-bold text-orange-600">2 000 F<span className="text-base text-gray-600">/mois</span></div>
+                <ul className="space-y-2 text-gray-700">
+                  {['1 groupe actif', 'Historique des transactions', 'Rappels de base'].map((f) => (
+                    <li key={f} className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-green-600" />
+                      <span className="text-sm">{f}</span>
+                    </li>
+                  ))}
+                </ul>
+                <a href="/pricing?plan=basique" className="inline-flex w-full">
+                  <Button variant="outline" className="w-full">Choisir</Button>
+                </a>
+              </CardContent>
+            </Card>
+
+            <Card className="border-2 border-orange-500 bg-orange-50 hover:shadow-lg transition-all hover:scale-105">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Standard</CardTitle>
+                  <Badge className="bg-orange-100 text-orange-700 border-orange-200">Recommandé</Badge>
+                </div>
+                <CardDescription>Jusqu'à 50 membres</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="text-3xl font-bold text-orange-600">5 000 F<span className="text-base text-gray-600">/mois</span></div>
+                <ul className="space-y-2 text-gray-700">
+                  {['Groupes illimités', 'Votes du groupe', 'Support prioritaire'].map((f) => (
+                    <li key={f} className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-green-600" />
+                      <span className="text-sm">{f}</span>
+                    </li>
+                  ))}
+                </ul>
+                <a href="/pricing?plan=standard" className="inline-flex w-full">
+                  <Button className="w-full bg-orange-500 hover:bg-orange-600">Choisir</Button>
+                </a>
+              </CardContent>
+            </Card>
+
+            <Card className="border-2 hover:border-blue-200 transition-all hover:shadow-lg">
+              <CardHeader>
+                <CardTitle>Premium</CardTitle>
+                <CardDescription>Illimité + support VIP</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="text-3xl font-bold text-orange-600">10 000 F<span className="text-base text-gray-600">/mois</span></div>
+                <ul className="space-y-2 text-gray-700">
+                  {['Rapports avancés', 'Rôles & permissions', 'Assistance onboarding'].map((f) => (
+                    <li key={f} className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-green-600" />
+                      <span className="text-sm">{f}</span>
+                    </li>
+                  ))}
+                </ul>
+                <a href="/pricing?plan=premium" className="inline-flex w-full">
+                  <Button variant="outline" className="w-full">Choisir</Button>
+                </a>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="mt-10 flex justify-center">
+            <a href="/pricing">
+              <Button size="lg" variant="outline">Voir tous les détails</Button>
+            </a>
+          </div>
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="py-20 bg-gradient-to-br from-orange-50 to-blue-50">
         <div className="container mx-auto px-4">

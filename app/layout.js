@@ -99,7 +99,7 @@ export default function RootLayout({ children }) {
                 <h3 className="font-semibold mb-4">Contact</h3>
                 <ul className="space-y-2 text-gray-400">
                   <li>
-                    <a className="hover:text-white" href="mailto:codelie14@gmail.com">archangeyatte@gmail.com</a>
+                    <a className="hover:text-white" href="mailto:archangeyatte@gmail.com">archangeyatte@gmail.com</a>
                   </li>
                   <li>
                     <a className="hover:text-white" href="tel:+2250711454841">+225 07 11 45 48 41</a>

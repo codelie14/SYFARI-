@@ -26,6 +26,12 @@ export default function DashboardPage() {
       router.push('/landing')
       return
     }
+
+    const plan = localStorage.getItem('plan')
+    if (!plan) {
+      router.push('/pricing?onboarding=1&next=%2Fdashboard')
+      return
+    }
     
     loadData()
   }, [router])
