@@ -12,22 +12,6 @@ export default function LandingPage() {
       <section className="relative overflow-hidden bg-gradient-to-br from-orange-500 via-orange-600 to-blue-900">
         <div className="absolute inset-0 bg-black/10"></div>
         <div className="container mx-auto px-4 py-20 relative z-10">
-          <div className="flex items-center justify-between mb-12">
-            <div className="flex items-center gap-3">
-              <img
-                src={'/assets/img/logo-syfari.jpg'}
-                alt="SYFARI Logo"
-                className="w-16 h-16 rounded-full border-4 border-white shadow-lg"
-              />
-              <h1 className="text-3xl font-bold text-white">SYFARI</h1>
-            </div>
-            <a href="/login">
-              <Button variant="outline" className="bg-white text-orange-600 hover:bg-orange-50">
-                Se connecter
-              </Button>
-            </a>
-          </div>
-
           <div className="grid md:grid-cols-2 gap-12 items-center animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="text-white">
               <Badge className="mb-6 bg-white/20 text-white border-white/30 px-4 py-1">
@@ -408,60 +392,6 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
-
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
-        <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-4 gap-8">
-            <div>
-              <div className="flex items-center gap-3 mb-4">
-                <img
-                  src={'/assets/img/logo-syfari.jpg'}
-                  alt="SYFARI"
-                  className="w-10 h-10 rounded-full"
-                />
-                <span className="text-xl font-bold">SYFARI</span>
-              </div>
-              <p className="text-gray-400">
-                La plateforme de gestion de tontines la plus simple et sécurisée d'Afrique.
-              </p>
-            </div>
-
-            <div>
-              <h3 className="font-semibold mb-4">Produit</h3>
-              <ul className="space-y-2 text-gray-400">
-                <li><a href="/landing" className="hover:text-white">Accueil</a></li>
-                <li><a href="/pricing" className="hover:text-white">Tarifs</a></li>
-                <li><a href="/faq" className="hover:text-white">FAQ</a></li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="font-semibold mb-4">Entreprise</h3>
-              <ul className="space-y-2 text-gray-400">
-                <li><a href="/about" className="hover:text-white">À propos</a></li>
-                <li><a href="/blog" className="hover:text-white">Blog</a></li>
-                <li><a href="/contact" className="hover:text-white">Contact</a></li>
-                <li><a href="/cgv" className="hover:text-white">CGV</a></li>
-                <li><a href="/policy" className="hover:text-white">Confidentialité</a></li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="font-semibold mb-4">Contact</h3>
-              <ul className="space-y-2 text-gray-400">
-                <li>archangeyatte@gmail.com</li>
-                <li>+225 07 11 45 48 41</li>
-                <li>Abidjan, Côte d'Ivoire</li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>© 2025 SYFARI - Tous droits réservés</p>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }

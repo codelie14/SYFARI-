@@ -9,9 +9,9 @@ export const metadata = {
 }
 
 export default function ContactPage() {
-  const email = 'archangeyatte@gmail.com'
-  const tel = '+225 07 00 00 00 00'
-  const whatsapp = 'https://wa.me/'
+  const email = 'codelie14@gmail.com'
+  const tel = '+225 07 11 45 48 41'
+  const whatsapp = 'https://wa.me/+2250711454841'
 
   return (
     <div className="container mx-auto px-4 py-12 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-5xl">
@@ -74,7 +74,7 @@ export default function ContactPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="text-gray-700">
-              Envoyez-nous un message sur WhatsApp (lien à configurer).
+              Envoyez-nous un message sur WhatsApp.
             </div>
             <a href={whatsapp} target="_blank" rel="noreferrer" className="inline-flex">
               <Button className="bg-orange-500 hover:bg-orange-600">Ouvrir WhatsApp</Button>

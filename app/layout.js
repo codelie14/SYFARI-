@@ -1,5 +1,6 @@
 import './globals.css'
 import dynamic from 'next/dynamic'
+import Link from 'next/link'
 
 const NavBar = dynamic(() => import('@/components/navbar'), { ssr: true })
 
@@ -41,8 +42,77 @@ export default function RootLayout({ children }) {
       <body className="bg-gray-50">
         <NavBar />
         <main className="min-h-screen">{children}</main>
-        <footer className="bg-gray-900 text-gray-400 text-center py-4 mt-12">
-          <p>© 2025 SYFARI — Tous droits réservés</p>
+        <footer className="bg-gray-900 text-white py-12 mt-12">
+          <div className="container mx-auto px-4">
+            <div className="grid md:grid-cols-4 gap-8">
+              <div>
+                <div className="flex items-center gap-3 mb-4">
+                  <img
+                    src={'/assets/img/logo-syfari.jpg'}
+                    alt="SYFARI"
+                    className="w-10 h-10 rounded-full"
+                  />
+                  <span className="text-xl font-bold">SYFARI</span>
+                </div>
+                <p className="text-gray-400">
+                  La plateforme de gestion de tontines la plus simple et sécurisée d'Afrique.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="font-semibold mb-4">Produit</h3>
+                <ul className="space-y-2 text-gray-400">
+                  <li>
+                    <Link href="/landing" className="hover:text-white">Accueil</Link>
+                  </li>
+                  <li>
+                    <Link href="/pricing" className="hover:text-white">Tarifs</Link>
+                  </li>
+                  <li>
+                    <Link href="/faq" className="hover:text-white">FAQ</Link>
+                  </li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 className="font-semibold mb-4">Entreprise</h3>
+                <ul className="space-y-2 text-gray-400">
+                  <li>
+                    <Link href="/about" className="hover:text-white">À propos</Link>
+                  </li>
+                  <li>
+                    <Link href="/blog" className="hover:text-white">Blog</Link>
+                  </li>
+                  <li>
+                    <Link href="/contact" className="hover:text-white">Contact</Link>
+                  </li>
+                  <li>
+                    <Link href="/cgv" className="hover:text-white">CGV</Link>
+                  </li>
+                  <li>
+                    <Link href="/policy" className="hover:text-white">Confidentialité</Link>
+                  </li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 className="font-semibold mb-4">Contact</h3>
+                <ul className="space-y-2 text-gray-400">
+                  <li>
+                    <a className="hover:text-white" href="mailto:codelie14@gmail.com">archangeyatte@gmail.com</a>
+                  </li>
+                  <li>
+                    <a className="hover:text-white" href="tel:+2250711454841">+225 07 11 45 48 41</a>
+                  </li>
+                  <li>Abidjan, Côte d'Ivoire</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
+              <p>© 2025 SYFARI - Tous droits réservés</p>
+            </div>
+          </div>
         </footer>
       </body>
     </html>
