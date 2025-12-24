@@ -74,7 +74,11 @@ cd /app
 
 2. **Installer les dépendances**
 ```bash
+# Avec Yarn (préconisé)
 yarn install
+
+# Ou avec npm
+npm install
 ```
 
 3. **Configuration de la base de données**
