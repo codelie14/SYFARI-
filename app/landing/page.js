@@ -1,60 +1,11 @@
 'use client';
 
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Check, Users, Wallet, TrendingUp, Shield, Bell, Vote, BarChart3, Clock, Smartphone, Globe, ArrowRight, Star, ChevronRight } from 'lucide-react';
-import { toast } from 'sonner';
-import { useRouter } from 'next/navigation';
+import { Check, Users, Wallet, TrendingUp, Shield, Bell, Vote, BarChart3, Clock, Smartphone as Phone, Globe, ArrowRight, Star, Target, Zap, Lock } from 'lucide-react';
 
 export default function LandingPage() {
-  const router = useRouter();
-  const [authMode, setAuthMode] = useState('login');
-  const [loading, setLoading] = useState(false);
-  const [authData, setAuthData] = useState({
-    email: '',
-    password: '',
-    nom: '',
-    prenom: '',
-    telephone: ''
-  });
-
-  const handleAuth = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      const endpoint = authMode === 'login' ? '/api/auth/login' : '/api/auth/register';
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(authData)
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        localStorage.setItem('token', data.token);
-        toast.success(authMode === 'login' ? 'Connexion réussie !' : 'Inscription réussie !');
-        router.push('/');
-      } else {
-        toast.error(data.error || 'Erreur d\'authentification');
-      }
-    } catch (error) {
-      toast.error('Erreur de connexion');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const scrollToAuth = () => {
-    document.getElementById('auth-section').scrollIntoView({ behavior: 'smooth' });
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       {/* Hero Section */}
@@ -70,12 +21,14 @@ export default function LandingPage() {
               />
               <h1 className="text-3xl font-bold text-white">SYFARI</h1>
             </div>
-            <Button onClick={scrollToAuth} variant="outline" className="bg-white text-orange-600 hover:bg-orange-50">
-              Se connecter
-            </Button>
+            <a href="/login">
+              <Button variant="outline" className="bg-white text-orange-600 hover:bg-orange-50">
+                Se connecter
+              </Button>
+            </a>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-12 items-center">
+          <div className="grid md:grid-cols-2 gap-12 items-center animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="text-white">
               <Badge className="mb-6 bg-white/20 text-white border-white/30 px-4 py-1">
                 🚀 La solution #1 en Afrique francophone
@@ -87,13 +40,17 @@ export default function LandingPage() {
                 SYFARI digitalise la gestion de vos groupes d'épargne collaborative. Simple, sécurisé et 100% transparent.
               </p>
               <div className="flex flex-wrap gap-4">
-                <Button size="lg" onClick={scrollToAuth} className="bg-white text-orange-600 hover:bg-orange-50">
-                  Commencer gratuitement
-                  <ArrowRight className="ml-2 w-5 h-5" />
-                </Button>
-                <Button size="lg" variant="outline" className="bg-transparent border-2 border-white text-white hover:bg-white/10">
-                  Voir la démo
-                </Button>
+                <a href="/login">
+                  <Button size="lg" className="bg-white text-orange-600 hover:bg-orange-50">
+                    Commencer gratuitement
+                    <ArrowRight className="ml-2 w-5 h-5" />
+                  </Button>
+                </a>
+                <a href="/login">
+                  <Button size="lg" className="bg-transparent border-2 border-white text-white hover:bg-white/10">
+                    Se connecter
+                  </Button>
+                </a>
               </div>
 
               <div className="mt-12 grid grid-cols-3 gap-6">
@@ -113,9 +70,9 @@ export default function LandingPage() {
             </div>
 
             <div className="relative">
-              <div className="bg-white rounded-2xl shadow-2xl p-8">
+              <div className="bg-white rounded-2xl shadow-2xl p-8 hover:shadow-3xl transition-shadow">
                 <div className="space-y-4">
-                  <div className="flex items-center gap-4 p-4 bg-green-50 rounded-lg border border-green-200">
+                  <div className="flex items-center gap-4 p-4 bg-green-50 rounded-lg border border-green-200 hover:border-green-400 transition">
                     <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center text-white">
                       <TrendingUp className="w-6 h-6" />
                     </div>
@@ -124,7 +81,7 @@ export default function LandingPage() {
                       <div className="text-sm text-green-700">+10,000 F CFA</div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200 hover:border-blue-400 transition">
                     <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center text-white">
                       <Users className="w-6 h-6" />
                     </div>
@@ -133,7 +90,7 @@ export default function LandingPage() {
                       <div className="text-sm text-blue-700">Aya a rejoint le groupe</div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4 p-4 bg-orange-50 rounded-lg border border-orange-200">
+                  <div className="flex items-center gap-4 p-4 bg-orange-50 rounded-lg border border-orange-200 hover:border-orange-400 transition">
                     <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center text-white">
                       <Bell className="w-6 h-6" />
                     </div>
@@ -253,7 +210,7 @@ export default function LandingPage() {
 
               <div className="space-y-4">
                 <div className="flex items-start gap-4">
-                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
                     <Check className="w-5 h-5 text-white" />
                   </div>
                   <div>
@@ -263,7 +220,7 @@ export default function LandingPage() {
                 </div>
 
                 <div className="flex items-start gap-4">
-                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
                     <Check className="w-5 h-5 text-white" />
                   </div>
                   <div>
@@ -273,7 +230,7 @@ export default function LandingPage() {
                 </div>
 
                 <div className="flex items-start gap-4">
-                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
                     <Check className="w-5 h-5 text-white" />
                   </div>
                   <div>
@@ -283,7 +240,7 @@ export default function LandingPage() {
                 </div>
 
                 <div className="flex items-start gap-4">
-                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
                     <Check className="w-5 h-5 text-white" />
                   </div>
                   <div>
@@ -307,7 +264,7 @@ export default function LandingPage() {
 
               <Card className="bg-white mt-8">
                 <CardHeader>
-                  <Smartphone className="w-8 h-8 text-blue-500 mb-2" />
+                  <Phone className="w-8 h-8 text-blue-500 mb-2" />
                   <CardTitle className="text-2xl">100%</CardTitle>
                   <CardDescription>
                     Mobile-first pour une utilisation facile partout
@@ -339,7 +296,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Testimonials */}
+      {/* Testimonials Section */}
       <section className="py-20">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
@@ -404,119 +361,50 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Auth Section */}
-      <section id="auth-section" className="py-20 bg-gradient-to-br from-gray-50 to-white">
+      {/* CTA Section */}
+      <section className="py-20 bg-gradient-to-br from-orange-50 to-blue-50">
         <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-12">
-              <h2 className="text-4xl font-bold mb-4">Commencez dès aujourd'hui</h2>
-              <p className="text-xl text-gray-600">Créez votre compte gratuitement en moins de 2 minutes</p>
+          <div className="max-w-4xl mx-auto text-center">
+            <h2 className="text-4xl font-bold mb-4">Prêt à transformer votre gestion de tontine ?</h2>
+            <p className="text-xl text-gray-600 mb-8">Rejoignez des milliers de groupes qui font confiance à SYFARI pour gérer leurs épargnes collectivement</p>
+            
+            <div className="grid md:grid-cols-3 gap-8 mb-12">
+              <Card className="hover:shadow-lg transition-all hover:scale-105">
+                <CardHeader>
+                  <Zap className="w-8 h-8 text-orange-600 mb-2" />
+                  <CardTitle>Mise en place rapide</CardTitle>
+                  <CardDescription>Créez votre groupe en 2 minutes</CardDescription>
+                </CardHeader>
+              </Card>
+              <Card className="hover:shadow-lg transition-all hover:scale-105">
+                <CardHeader>
+                  <Lock className="w-8 h-8 text-blue-600 mb-2" />
+                  <CardTitle>100% Sécurisé</CardTitle>
+                  <CardDescription>Vos données cryptées et protégées</CardDescription>
+                </CardHeader>
+              </Card>
+              <Card className="hover:shadow-lg transition-all hover:scale-105">
+                <CardHeader>
+                  <Target className="w-8 h-8 text-green-600 mb-2" />
+                  <CardTitle>Support 24/7</CardTitle>
+                  <CardDescription>Nous sommes toujours là pour vous</CardDescription>
+                </CardHeader>
+              </Card>
             </div>
 
-            <Card className="shadow-2xl">
-              <CardContent className="p-8">
-                <Tabs value={authMode} onValueChange={setAuthMode}>
-                  <TabsList className="grid w-full grid-cols-2 mb-6">
-                    <TabsTrigger value="register">Inscription</TabsTrigger>
-                    <TabsTrigger value="login">Connexion</TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="register">
-                    <form onSubmit={handleAuth} className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="nom">Nom</Label>
-                          <Input
-                            id="nom"
-                            placeholder="Nom"
-                            value={authData.nom}
-                            onChange={(e) => setAuthData({ ...authData, nom: e.target.value })}
-                            required
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="prenom">Prénom</Label>
-                          <Input
-                            id="prenom"
-                            placeholder="Prénom"
-                            value={authData.prenom}
-                            onChange={(e) => setAuthData({ ...authData, prenom: e.target.value })}
-                            required
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <Label htmlFor="telephone">Téléphone</Label>
-                        <Input
-                          id="telephone"
-                          type="tel"
-                          placeholder="+225 XX XX XX XX XX"
-                          value={authData.telephone}
-                          onChange={(e) => setAuthData({ ...authData, telephone: e.target.value })}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="email-register">Email</Label>
-                        <Input
-                          id="email-register"
-                          type="email"
-                          placeholder="votre@email.com"
-                          value={authData.email}
-                          onChange={(e) => setAuthData({ ...authData, email: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="password-register">Mot de passe</Label>
-                        <Input
-                          id="password-register"
-                          type="password"
-                          placeholder="••••••••"
-                          value={authData.password}
-                          onChange={(e) => setAuthData({ ...authData, password: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <Button type="submit" className="w-full bg-orange-500 hover:bg-orange-600" size="lg" disabled={loading}>
-                        {loading ? 'Inscription...' : 'S\'inscrire gratuitement'}
-                        <ArrowRight className="ml-2 w-5 h-5" />
-                      </Button>
-                    </form>
-                  </TabsContent>
-
-                  <TabsContent value="login">
-                    <form onSubmit={handleAuth} className="space-y-4">
-                      <div>
-                        <Label htmlFor="email">Email</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          placeholder="votre@email.com"
-                          value={authData.email}
-                          onChange={(e) => setAuthData({ ...authData, email: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="password">Mot de passe</Label>
-                        <Input
-                          id="password"
-                          type="password"
-                          placeholder="••••••••"
-                          value={authData.password}
-                          onChange={(e) => setAuthData({ ...authData, password: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <Button type="submit" className="w-full bg-orange-500 hover:bg-orange-600" size="lg" disabled={loading}>
-                        {loading ? 'Connexion...' : 'Se connecter'}
-                        <ArrowRight className="ml-2 w-5 h-5" />
-                      </Button>
-                    </form>
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-            </Card>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <a href="/login">
+                <Button size="lg" className="bg-orange-500 hover:bg-orange-600">
+                  Démarrer gratuitement
+                  <ArrowRight className="ml-2 w-5 h-5" />
+                </Button>
+              </a>
+              <a href="/pricing">
+                <Button size="lg" variant="outline">
+                  Voir les tarifs
+                </Button>
+              </a>
+            </div>
           </div>
         </div>
       </section>
@@ -542,16 +430,16 @@ export default function LandingPage() {
             <div>
               <h3 className="font-semibold mb-4">Produit</h3>
               <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-white">Fonctionnalités</a></li>
-                <li><a href="#" className="hover:text-white">Tarifs</a></li>
-                <li><a href="#" className="hover:text-white">FAQ</a></li>
+                <li><a href="/landing" className="hover:text-white">Accueil</a></li>
+                <li><a href="/pricing" className="hover:text-white">Tarifs</a></li>
+                <li><a href="/faq" className="hover:text-white">FAQ</a></li>
               </ul>
             </div>
 
             <div>
               <h3 className="font-semibold mb-4">Entreprise</h3>
               <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-white">À propos</a></li>
+                <li><a href="/about" className="hover:text-white">À propos</a></li>
                 <li><a href="#" className="hover:text-white">Blog</a></li>
                 <li><a href="#" className="hover:text-white">Contact</a></li>
               </ul>
