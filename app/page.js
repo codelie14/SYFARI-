@@ -57,8 +57,17 @@ export default function App() {
         });
         if (res.ok) {
           const userData = await res.json();
+          if (!userData?.plan) {
+            setUser(userData);
+            setIsAuthenticated(true);
+            setLoading(false);
+            router.push('/pricing?onboarding=1&next=%2Fdashboard');
+            return;
+          }
           setUser(userData);
           setIsAuthenticated(true);
+          localStorage.setItem('plan', userData.plan);
+          localStorage.setItem('user', JSON.stringify(userData));
           loadDashboard();
           loadGroupes();
         } else {

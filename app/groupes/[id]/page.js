@@ -27,14 +27,38 @@ export default function GroupeDetail({ params }) {
     loadData()
   }, [router, id])
 
+  const ensureActivePlan = async () => {
+    const token = localStorage.getItem('token')
+    if (!token) return false
+    const headers = { Authorization: `Bearer ${token}` }
+    const userRes = await fetch('/api/user', { headers })
+    const userData = userRes.ok ? await userRes.json() : null
+    if (!userData?.plan) {
+      router.push(`/pricing?onboarding=1&next=${encodeURIComponent(`/groupes/${id}`)}`)
+      return false
+    }
+    localStorage.setItem('plan', userData.plan)
+    localStorage.setItem('user', JSON.stringify(userData))
+    return true
+  }
+
   const loadData = async () => {
     try {
       setLoading(true)
+      const ok = await ensureActivePlan()
+      if (!ok) return
       const token = localStorage.getItem('token')
       const headers = { Authorization: `Bearer ${token}` }
 
       const groupeRes = await fetch(`/api/groupes/${id}`, { headers })
       if (!groupeRes.ok) {
+        if (groupeRes.status === 403) {
+          const payload = await groupeRes.json().catch(() => null)
+          if (payload?.error === 'Aucun forfait actif') {
+            router.push(`/pricing?onboarding=1&next=${encodeURIComponent(`/groupes/${id}`)}`)
+            return
+          }
+        }
         setGroupe(null)
         setMembres([])
         setTransactions([])

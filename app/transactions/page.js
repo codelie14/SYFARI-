@@ -25,13 +25,37 @@ export default function TransactionsPage() {
     loadTransactions()
   }, [router])
 
+  const ensureActivePlan = async () => {
+    const token = localStorage.getItem('token')
+    if (!token) return false
+    const headers = { Authorization: `Bearer ${token}` }
+    const userRes = await fetch('/api/user', { headers })
+    const userData = userRes.ok ? await userRes.json() : null
+    if (!userData?.plan) {
+      router.push('/pricing?onboarding=1&next=%2Ftransactions')
+      return false
+    }
+    localStorage.setItem('plan', userData.plan)
+    localStorage.setItem('user', JSON.stringify(userData))
+    return true
+  }
+
   const loadTransactions = async () => {
     try {
       setLoading(true)
+      const ok = await ensureActivePlan()
+      if (!ok) return
       const token = localStorage.getItem('token')
       const res = await fetch('/api/transactions', {
         headers: { Authorization: `Bearer ${token}` },
       })
+      if (res.status === 403) {
+        const payload = await res.json().catch(() => null)
+        if (payload?.error === 'Aucun forfait actif') {
+          router.push('/pricing?onboarding=1&next=%2Ftransactions')
+          return
+        }
+      }
       const data = res.ok ? await res.json() : []
       setTransactions(Array.isArray(data) ? data : [])
     } catch (error) {

@@ -43,6 +43,11 @@ export default function SettingsPage() {
         const res = await fetch('/api/user', { headers: { Authorization: `Bearer ${token}` } })
         const data = await res.json()
         if (res.ok) {
+          if (!data?.plan) {
+            setLoading(false)
+            router.push('/pricing?onboarding=1&next=%2Fsettings')
+            return
+          }
           setUser(data)
           setForm({
             prenom: data?.prenom || '',

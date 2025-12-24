@@ -26,12 +26,6 @@ export default function DashboardPage() {
       router.push('/landing')
       return
     }
-
-    const plan = localStorage.getItem('plan')
-    if (!plan) {
-      router.push('/pricing?onboarding=1&next=%2Fdashboard')
-      return
-    }
     
     loadData()
   }, [router])
@@ -40,6 +34,15 @@ export default function DashboardPage() {
     try {
       const token = localStorage.getItem('token')
       const headers = { Authorization: `Bearer ${token}` }
+
+      const userRes = await fetch('/api/user', { headers })
+      const userData = userRes.ok ? await userRes.json() : null
+      if (!userData?.plan) {
+        router.push('/pricing?onboarding=1&next=%2Fdashboard')
+        return
+      }
+      localStorage.setItem('plan', userData.plan)
+      localStorage.setItem('user', JSON.stringify(userData))
 
       // Charger les groupes
       const groupesRes = await fetch('/api/groupes', { headers })

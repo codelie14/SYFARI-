@@ -97,6 +97,31 @@ const successResponse = (data, status = 200) => {
   return NextResponse.json(data, { status });
 };
 
+const getActivePlanUser = async (userId) => {
+  const userData = await getUserById(userId);
+  if (!userData?.plan) {
+    return { userData: null, limits: null, error: errorResponse('Aucun forfait actif', 403) };
+  }
+  const limits = getPlanLimits(userData.plan);
+  if (!limits) {
+    return { userData: null, limits: null, error: errorResponse('Forfait invalide', 403) };
+  }
+  return { userData, limits, error: null };
+};
+
+const parseCount = (value) => {
+  const n = typeof value === 'number' ? value : parseInt(String(value || '0'), 10);
+  return Number.isFinite(n) ? n : 0;
+};
+
+const PLAN_LIMITS = {
+  basique: { maxGroups: 1, maxMembers: 10 },
+  standard: { maxGroups: null, maxMembers: 50 },
+  premium: { maxGroups: null, maxMembers: null },
+};
+
+const getPlanLimits = (planId) => PLAN_LIMITS[planId] || null;
+
 // Route handler principal
 export async function GET(request, { params }) {
   await ensureDbInitialized();
@@ -182,6 +207,9 @@ export async function GET(request, { params }) {
         return errorResponse('Non authentifié', 401);
       }
 
+      const { error } = await getActivePlanUser(user.id);
+      if (error) return error;
+
       const result = await query(`
         SELECT g.*, u.nom as responsable_nom, u.prenom as responsable_prenom,
                (SELECT COUNT(*) FROM groupe_membres WHERE groupe_id = g.id) as nb_membres
@@ -203,15 +231,21 @@ export async function GET(request, { params }) {
         return errorResponse('Non authentifié', 401);
       }
 
+      const { error } = await getActivePlanUser(user.id);
+      if (error) return error;
+
       const groupeResult = await query(`
         SELECT g.*, u.nom as responsable_nom, u.prenom as responsable_prenom, u.email as responsable_email
         FROM groupes g
         LEFT JOIN users u ON g.responsable_id = u.id
         WHERE g.id = $1
-      `, [groupeId]);
+          AND (g.responsable_id = $2 OR EXISTS(
+            SELECT 1 FROM groupe_membres gm WHERE gm.groupe_id = g.id AND gm.user_id = $2
+          ))
+      `, [groupeId, user.id]);
 
       if (groupeResult.rows.length === 0) {
-        return errorResponse('Groupe non trouvé', 404);
+        return errorResponse('Groupe non trouvé ou non autorisé', 404);
       }
 
       const membresResult = await query(`
@@ -235,15 +269,20 @@ export async function GET(request, { params }) {
         return errorResponse('Non authentifié', 401);
       }
 
+      const { error } = await getActivePlanUser(user.id);
+      if (error) return error;
+
       const groupeId = searchParams.get('groupe_id');
       let sqlQuery = `
         SELECT t.*, u.nom as membre_nom, u.prenom as membre_prenom, g.nom as groupe_nom
         FROM transactions t
         LEFT JOIN users u ON t.membre_id = u.id
         LEFT JOIN groupes g ON t.groupe_id = g.id
-        WHERE 1=1
+        WHERE (g.responsable_id = $1 OR EXISTS(
+          SELECT 1 FROM groupe_membres gm WHERE gm.groupe_id = t.groupe_id AND gm.user_id = $1
+        ))
       `;
-      const params = [];
+      const params = [user.id];
 
       if (groupeId) {
         params.push(groupeId);
@@ -262,6 +301,9 @@ export async function GET(request, { params }) {
       if (!user) {
         return errorResponse('Non authentifié', 401);
       }
+
+      const { error } = await getActivePlanUser(user.id);
+      if (error) return error;
 
       // Nombre de groupes
       const groupesCount = await query(`
@@ -282,7 +324,9 @@ export async function GET(request, { params }) {
         FROM transactions t
         LEFT JOIN groupes g ON t.groupe_id = g.id
         LEFT JOIN users u ON t.membre_id = u.id
-        WHERE t.membre_id = $1 OR g.responsable_id = $1
+        WHERE g.responsable_id = $1
+           OR t.membre_id = $1
+           OR EXISTS(SELECT 1 FROM groupe_membres gm WHERE gm.groupe_id = g.id AND gm.user_id = $1)
         ORDER BY t.date_transaction DESC
         LIMIT 5
       `, [user.id]);
@@ -308,9 +352,25 @@ export async function GET(request, { params }) {
         return errorResponse('Non authentifié', 401);
       }
 
+      const { error } = await getActivePlanUser(user.id);
+      if (error) return error;
+
       const groupeId = searchParams.get('groupe_id');
       if (!groupeId) {
         return errorResponse('groupe_id requis', 400);
+      }
+
+      const accessRes = await query(
+        `SELECT 1 FROM groupes g
+         WHERE g.id = $1
+           AND (g.responsable_id = $2 OR EXISTS(
+             SELECT 1 FROM groupe_membres gm WHERE gm.groupe_id = g.id AND gm.user_id = $2
+           ))
+         LIMIT 1`,
+        [groupeId, user.id]
+      );
+      if (accessRes.rows.length === 0) {
+        return errorResponse('Non autorisé', 403);
       }
 
       const result = await query(`
@@ -500,6 +560,20 @@ export async function POST(request, { params }) {
         return errorResponse('Non authentifié', 401);
       }
 
+      const { userData, limits, error } = await getActivePlanUser(user.id);
+      if (error) return error;
+
+      if (limits.maxGroups !== null) {
+        const groupCountRes = await query(
+          'SELECT COUNT(*)::int as count FROM groupes WHERE responsable_id = $1',
+          [user.id]
+        );
+        const groupCount = parseCount(groupCountRes.rows?.[0]?.count);
+        if (groupCount >= limits.maxGroups) {
+          return errorResponse(`Limite de ${limits.maxGroups} groupe${limits.maxGroups > 1 ? 's' : ''} atteinte pour votre forfait`, 403);
+        }
+      }
+
       const { nom, description, montant_cotisation, frequence_cotisation } = body;
 
       if (!nom || !montant_cotisation || !frequence_cotisation) {
@@ -529,6 +603,9 @@ export async function POST(request, { params }) {
         return errorResponse('Non authentifié', 401);
       }
 
+      const { limits, error } = await getActivePlanUser(user.id);
+      if (error) return error;
+
       const { email } = body;
       if (!email) {
         return errorResponse('Email requis');
@@ -548,6 +625,17 @@ export async function POST(request, { params }) {
 
       if (groupeResult.rows.length === 0) {
         return errorResponse('Vous n\'êtes pas le responsable de ce groupe', 403);
+      }
+
+      if (limits.maxMembers !== null) {
+        const membersCountRes = await query(
+          'SELECT COUNT(*)::int as count FROM groupe_membres WHERE groupe_id = $1',
+          [groupeId]
+        );
+        const membersCount = parseCount(membersCountRes.rows?.[0]?.count);
+        if (membersCount >= limits.maxMembers) {
+          return errorResponse(`Limite de ${limits.maxMembers} membres atteinte pour votre forfait`, 403);
+        }
       }
 
       // Ajouter le membre
@@ -574,10 +662,40 @@ export async function POST(request, { params }) {
         return errorResponse('Non authentifié', 401);
       }
 
+      const { error } = await getActivePlanUser(user.id);
+      if (error) return error;
+
       const { groupe_id, montant, type, description } = body;
 
       if (!groupe_id || !montant || !type) {
         return errorResponse('groupe_id, montant et type requis');
+      }
+
+      const montantNumber = Number(montant);
+      if (!Number.isFinite(montantNumber) || montantNumber <= 0) {
+        return errorResponse('montant invalide');
+      }
+
+      const accessRes = await query(
+        `SELECT g.id, g.responsable_id,
+                EXISTS(SELECT 1 FROM groupe_membres gm WHERE gm.groupe_id = g.id AND gm.user_id = $2) as is_membre
+         FROM groupes g
+         WHERE g.id = $1`,
+        [groupe_id, user.id]
+      );
+      const groupRow = accessRes.rows?.[0];
+      if (!groupRow) {
+        return errorResponse('Groupe non trouvé', 404);
+      }
+
+      const isResponsable = groupRow.responsable_id === user.id;
+      const isMembre = !!groupRow.is_membre;
+      if (!isResponsable && !isMembre) {
+        return errorResponse('Non autorisé', 403);
+      }
+
+      if (type === 'retrait' && !isResponsable) {
+        return errorResponse('Seul le responsable peut effectuer un retrait', 403);
       }
 
       // Créer la transaction
@@ -585,17 +703,17 @@ export async function POST(request, { params }) {
         INSERT INTO transactions (groupe_id, membre_id, montant, type, description)
         VALUES ($1, $2, $3, $4, $5)
         RETURNING *
-      `, [groupe_id, user.id, montant, type, description]);
+      `, [groupe_id, user.id, montantNumber, type, description]);
 
       // Mettre à jour le solde du groupe
       if (type === 'cotisation') {
         await query(`
           UPDATE groupes SET solde = solde + $1 WHERE id = $2
-        `, [montant, groupe_id]);
+        `, [montantNumber, groupe_id]);
       } else if (type === 'retrait') {
         await query(`
           UPDATE groupes SET solde = solde - $1 WHERE id = $2
-        `, [montant, groupe_id]);
+        `, [montantNumber, groupe_id]);
       }
 
       return successResponse(result.rows[0], 201);
@@ -612,6 +730,18 @@ export async function POST(request, { params }) {
 
       if (!groupe_id || !titre || !date_fin || !options || options.length < 2) {
         return errorResponse('Données incomplètes pour créer un vote');
+      }
+
+      const { error } = await getActivePlanUser(user.id);
+      if (error) return error;
+
+      const groupeRes = await query('SELECT responsable_id FROM groupes WHERE id = $1', [groupe_id]);
+      const responsableId = groupeRes.rows?.[0]?.responsable_id;
+      if (!responsableId) {
+        return errorResponse('Groupe non trouvé', 404);
+      }
+      if (responsableId !== user.id) {
+        return errorResponse('Non autorisé', 403);
       }
 
       // Créer le vote
@@ -645,6 +775,34 @@ export async function POST(request, { params }) {
       const { option_id } = body;
       if (!option_id) {
         return errorResponse('option_id requis');
+      }
+
+      const { error } = await getActivePlanUser(user.id);
+      if (error) return error;
+
+      const voteAccessRes = await query(
+        `SELECT v.groupe_id
+         FROM votes v
+         WHERE v.id = $1`,
+        [voteId]
+      );
+      const voteGroupeId = voteAccessRes.rows?.[0]?.groupe_id;
+      if (!voteGroupeId) {
+        return errorResponse('Vote non trouvé', 404);
+      }
+
+      const memberRes = await query(
+        `SELECT 1 FROM groupe_membres WHERE groupe_id = $1 AND user_id = $2 LIMIT 1`,
+        [voteGroupeId, user.id]
+      );
+      if (memberRes.rows.length === 0) {
+        const respRes = await query(
+          `SELECT 1 FROM groupes WHERE id = $1 AND responsable_id = $2 LIMIT 1`,
+          [voteGroupeId, user.id]
+        );
+        if (respRes.rows.length === 0) {
+          return errorResponse('Non autorisé', 403);
+        }
       }
 
       try {
@@ -720,6 +878,9 @@ export async function PUT(request, { params }) {
       const groupeId = path[1];
       const { nom, description, montant_cotisation, frequence_cotisation } = body;
 
+      const { error } = await getActivePlanUser(user.id);
+      if (error) return error;
+
       const result = await query(`
         UPDATE groupes 
         SET nom = COALESCE($1, nom),
@@ -761,6 +922,9 @@ export async function DELETE(request, { params }) {
     if (endpoint.match(/^groupes\/[^/]+$/) && path.length === 2) {
       const groupeId = path[1];
 
+      const { error } = await getActivePlanUser(user.id);
+      if (error) return error;
+
       const result = await query(`
         DELETE FROM groupes WHERE id = $1 AND responsable_id = $2
         RETURNING *
@@ -777,6 +941,9 @@ export async function DELETE(request, { params }) {
     if (endpoint.match(/^groupes\/[^/]+\/membres\/[^/]+$/)) {
       const groupeId = path[1];
       const userId = path[3];
+
+      const { error } = await getActivePlanUser(user.id);
+      if (error) return error;
 
       // Vérifier que l'utilisateur est le responsable
       const groupeResult = await query(

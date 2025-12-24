@@ -38,20 +38,47 @@ export default function ProfilePage() {
   ]
 
   useEffect(() => {
-    const token = localStorage.getItem('token')
-    if (!token) {
-      router.push('/landing')
-      return
+    const run = async () => {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        router.push('/landing')
+        return
+      }
+
+      try {
+        const res = await fetch('/api/user', { headers: { Authorization: `Bearer ${token}` } })
+        const data = res.ok ? await res.json() : null
+        if (data && !data?.plan) {
+          setLoading(false)
+          router.push('/pricing?onboarding=1&next=%2Fprofile')
+          return
+        }
+        if (data) {
+          setUser(data)
+          setEditData(data)
+          localStorage.setItem('user', JSON.stringify(data))
+          if (data?.plan) localStorage.setItem('plan', data.plan)
+        } else {
+          const userData = localStorage.getItem('user')
+          if (userData) {
+            const parsed = JSON.parse(userData)
+            setUser(parsed)
+            setEditData(parsed)
+          }
+        }
+      } catch {
+        const userData = localStorage.getItem('user')
+        if (userData) {
+          const parsed = JSON.parse(userData)
+          setUser(parsed)
+          setEditData(parsed)
+        }
+      } finally {
+        setLoading(false)
+      }
     }
-    const userData = localStorage.getItem('user')
-    if (userData) {
-      const parsed = JSON.parse(userData)
-      setUser(parsed)
-      setEditData(parsed)
-    }
-    setTimeout(() => {
-      setLoading(false)
-    }, 500)
+
+    run()
   }, [router])
 
   const handleSave = () => {

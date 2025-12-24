@@ -32,13 +32,37 @@ export default function GroupesPage() {
     loadGroupes()
   }, [router])
 
+  const ensureActivePlan = async () => {
+    const token = localStorage.getItem('token')
+    if (!token) return false
+    const headers = { Authorization: `Bearer ${token}` }
+    const userRes = await fetch('/api/user', { headers })
+    const userData = userRes.ok ? await userRes.json() : null
+    if (!userData?.plan) {
+      router.push('/pricing?onboarding=1&next=%2Fgroupes')
+      return false
+    }
+    localStorage.setItem('plan', userData.plan)
+    localStorage.setItem('user', JSON.stringify(userData))
+    return true
+  }
+
   const loadGroupes = async () => {
     try {
       setLoading(true)
+      const ok = await ensureActivePlan()
+      if (!ok) return
       const token = localStorage.getItem('token')
       const res = await fetch('/api/groupes', {
         headers: { Authorization: `Bearer ${token}` },
       })
+      if (res.status === 403) {
+        const payload = await res.json().catch(() => null)
+        if (payload?.error === 'Aucun forfait actif') {
+          router.push('/pricing?onboarding=1&next=%2Fgroupes')
+          return
+        }
+      }
       const data = res.ok ? await res.json() : []
       setGroupes(Array.isArray(data) ? data : [])
     } catch (error) {
@@ -51,6 +75,8 @@ export default function GroupesPage() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
+      const ok = await ensureActivePlan()
+      if (!ok) return
       const token = localStorage.getItem('token')
       const res = await fetch('/api/groupes', {
         method: 'POST',
@@ -69,6 +95,10 @@ export default function GroupesPage() {
       const data = await res.json()
 
       if (!res.ok) {
+        if (res.status === 403 && data?.error === 'Aucun forfait actif') {
+          router.push('/pricing?onboarding=1&next=%2Fgroupes')
+          return
+        }
         toast.error(data?.error || 'Erreur lors de la création')
         return
       }
