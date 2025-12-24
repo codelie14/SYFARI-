@@ -63,9 +63,9 @@ export default function LandingPage() {
         <div className="container mx-auto px-4 py-20 relative z-10">
           <div className="flex items-center justify-between mb-12">
             <div className="flex items-center gap-3">
-              <img 
-                src="https://customer-assets.emergentagent.com/job_c313cba5-f4b8-4c93-8785-8b0a73fb5d88/artifacts/3e40kvb8_66912436-e009-4eed-9984-782b74918776.jpg" 
-                alt="SYFARI Logo" 
+              <img
+                src={'/assets/img/logo-syfari.jpg'}
+                alt="SYFARI Logo"
                 className="w-16 h-16 rounded-full border-4 border-white shadow-lg"
               />
               <h1 className="text-3xl font-bold text-white">SYFARI</h1>
@@ -527,9 +527,9 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-4 gap-8">
             <div>
               <div className="flex items-center gap-3 mb-4">
-                <img 
-                  src="https://customer-assets.emergentagent.com/job_c313cba5-f4b8-4c93-8785-8b0a73fb5d88/artifacts/3e40kvb8_66912436-e009-4eed-9984-782b74918776.jpg" 
-                  alt="SYFARI" 
+                <img
+                  src={'/assets/img/logo-syfari.jpg'}
+                  alt="SYFARI"
                   className="w-10 h-10 rounded-full"
                 />
                 <span className="text-xl font-bold">SYFARI</span>

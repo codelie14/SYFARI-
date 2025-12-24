@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -260,9 +260,9 @@ export default function App() {
       <header className="bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <img 
-              src="https://customer-assets.emergentagent.com/job_c313cba5-f4b8-4c93-8785-8b0a73fb5d88/artifacts/3e40kvb8_66912436-e009-4eed-9984-782b74918776.jpg" 
-              alt="SYFARI" 
+            <img
+              src={'/assets/img/logo-syfari.jpg'}
+              alt="SYFARI"
               className="w-12 h-12 rounded-full border-2 border-white"
             />
             <h1 className="text-2xl font-bold">SYFARI</h1>

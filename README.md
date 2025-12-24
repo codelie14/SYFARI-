@@ -1,6 +1,6 @@
 # SYFARI - Plateforme de Gestion de Tontines
 
-![SYFARI Logo](https://customer-assets.emergentagent.com/job_c313cba5-f4b8-4c93-8785-8b0a73fb5d88/artifacts/3e40kvb8_66912436-e009-4eed-9984-782b74918776.jpg)
+![SYFARI Logo](/assets/img/logo-syfari.jpg)
 
 ## 📋 Description
 
@@ -107,6 +107,14 @@ yarn dev
 # Dans un autre terminal, initialiser la base de données
 curl -X GET http://localhost:3000/api/init
 ```
+
+> Note: Pour que les images et les previews sociales fonctionnent correctement, placez les icônes publiques dans `public/` :
+
+- `public/assets/img/logo-syfari.jpg` (déjà copié)
+- `public/favicon.ico` (ajoutez un fichier ICO ou SVG)
+- `public/apple-touch-icon.png` (optionnel)
+
+Vous pouvez générer rapidement des icônes via https://realfavicongenerator.net/ et déposer les fichiers dans `public/`.
 
 Cela créera automatiquement toutes les tables nécessaires :
 - `users` - Utilisateurs
