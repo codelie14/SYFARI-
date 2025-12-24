@@ -13,10 +13,21 @@ import {
 let dbInitialized = false;
 
 const ensureDbInitialized = async () => {
-  if (!dbInitialized) {
-    await initDatabase();
-    dbInitialized = true;
+  const state = globalThis.__syfariDbInitState || { initialized: false, initializing: null };
+  globalThis.__syfariDbInitState = state;
+
+  if (state.initialized || dbInitialized) return;
+
+  if (!state.initializing) {
+    state.initializing = initDatabase().then(() => {
+      state.initialized = true;
+      dbInitialized = true;
+    }).finally(() => {
+      state.initializing = null;
+    });
   }
+
+  await state.initializing;
 };
 
 // Helper pour les réponses d'erreur
@@ -41,6 +52,11 @@ export async function GET(request, { params }) {
     // GET /api/init - Initialiser la base de données
     if (endpoint === 'init') {
       await initDatabase();
+      const state = globalThis.__syfariDbInitState || { initialized: false, initializing: null };
+      state.initialized = true;
+      state.initializing = null;
+      globalThis.__syfariDbInitState = state;
+      dbInitialized = true;
       return successResponse({ message: 'Base de données initialisée avec succès' });
     }
 
