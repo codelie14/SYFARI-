@@ -116,11 +116,13 @@ const parseCount = (value) => {
 
 const PLAN_LIMITS = {
   basique: { maxGroups: 1, maxMembers: 10 },
-  standard: { maxGroups: null, maxMembers: 50 },
+  standard: { maxGroups: 15, maxMembers: 50 },
   premium: { maxGroups: null, maxMembers: null },
 };
 
 const getPlanLimits = (planId) => PLAN_LIMITS[planId] || null;
+
+const isAtLeastStandardPlan = (planId) => planId === 'standard' || planId === 'premium';
 
 // Route handler principal
 export async function GET(request, { params }) {
@@ -352,8 +354,11 @@ export async function GET(request, { params }) {
         return errorResponse('Non authentifié', 401);
       }
 
-      const { error } = await getActivePlanUser(user.id);
+      const { userData, error } = await getActivePlanUser(user.id);
       if (error) return error;
+      if (!isAtLeastStandardPlan(userData.plan)) {
+        return errorResponse('Fonctionnalité réservée au forfait Standard', 403);
+      }
 
       const groupeId = searchParams.get('groupe_id');
       if (!groupeId) {
@@ -383,6 +388,56 @@ export async function GET(request, { params }) {
       `, [groupeId, user.id]);
 
       return successResponse(result.rows);
+    }
+
+    // GET /api/votes/:id - Détails d'un vote + options
+    if (endpoint.match(/^votes\/[^/]+$/) && path.length === 2) {
+      const voteId = path[1];
+      const user = getUserFromToken(request);
+      if (!user) {
+        return errorResponse('Non authentifié', 401);
+      }
+
+      const { userData, error } = await getActivePlanUser(user.id);
+      if (error) return error;
+      if (!isAtLeastStandardPlan(userData.plan)) {
+        return errorResponse('Fonctionnalité réservée au forfait Standard', 403);
+      }
+
+      const voteRes = await query('SELECT * FROM votes WHERE id = $1', [voteId]);
+      if (voteRes.rows.length === 0) {
+        return errorResponse('Vote non trouvé', 404);
+      }
+      const vote = voteRes.rows[0];
+
+      const accessRes = await query(
+        `SELECT 1 FROM groupes g
+         WHERE g.id = $1
+           AND (g.responsable_id = $2 OR EXISTS(
+             SELECT 1 FROM groupe_membres gm WHERE gm.groupe_id = g.id AND gm.user_id = $2
+           ))
+         LIMIT 1`,
+        [vote.groupe_id, user.id]
+      );
+      if (accessRes.rows.length === 0) {
+        return errorResponse('Non autorisé', 403);
+      }
+
+      const optionsRes = await query(
+        'SELECT id, option_text, nb_votes FROM vote_options WHERE vote_id = $1 ORDER BY id ASC',
+        [voteId]
+      );
+
+      const userVoteRes = await query(
+        'SELECT option_id FROM user_votes WHERE vote_id = $1 AND user_id = $2',
+        [voteId, user.id]
+      );
+
+      return successResponse({
+        vote,
+        options: optionsRes.rows,
+        user_vote_option_id: userVoteRes.rows?.[0]?.option_id || null,
+      });
     }
 
     return errorResponse('Endpoint non trouvé', 404);
@@ -477,12 +532,11 @@ export async function POST(request, { params }) {
           },
           store: {
             name: 'SYFARI',
-            website_url: baseUrl,
           },
           actions: {
             callback_url: `${baseUrl}/api/paydunya/callback`,
-            return_url: `${baseUrl}/pricing?payment=success&next=${encodeURIComponent(nextPath)}`,
-            cancel_url: `${baseUrl}/pricing?payment=cancel&next=${encodeURIComponent(nextPath)}`,
+            return_url: `${baseUrl}/pricing`,
+            cancel_url: `${baseUrl}/pricing`,
           },
           custom_data: {
             user_id: user.id,
@@ -732,8 +786,11 @@ export async function POST(request, { params }) {
         return errorResponse('Données incomplètes pour créer un vote');
       }
 
-      const { error } = await getActivePlanUser(user.id);
+      const { userData, error } = await getActivePlanUser(user.id);
       if (error) return error;
+      if (!isAtLeastStandardPlan(userData.plan)) {
+        return errorResponse('Fonctionnalité réservée au forfait Standard', 403);
+      }
 
       const groupeRes = await query('SELECT responsable_id FROM groupes WHERE id = $1', [groupe_id]);
       const responsableId = groupeRes.rows?.[0]?.responsable_id;
@@ -777,8 +834,11 @@ export async function POST(request, { params }) {
         return errorResponse('option_id requis');
       }
 
-      const { error } = await getActivePlanUser(user.id);
+      const { userData, error } = await getActivePlanUser(user.id);
       if (error) return error;
+      if (!isAtLeastStandardPlan(userData.plan)) {
+        return errorResponse('Fonctionnalité réservée au forfait Standard', 403);
+      }
 
       const voteAccessRes = await query(
         `SELECT v.groupe_id

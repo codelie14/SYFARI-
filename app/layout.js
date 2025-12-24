@@ -3,6 +3,7 @@ import dynamic from 'next/dynamic'
 import Link from 'next/link'
 
 const NavBar = dynamic(() => import('@/components/navbar'), { ssr: true })
+const SonnerToaster = dynamic(() => import('sonner').then((mod) => mod.Toaster), { ssr: false })
 
 const title = 'SYFARI — Gestion digitale des tontines'
 const description = "SYFARI digitalise la gestion des tontines : cotisations, retraits, membres et transparence financière."
@@ -42,6 +43,7 @@ export default function RootLayout({ children }) {
       <body className="bg-gray-50">
         <NavBar />
         <main className="min-h-screen">{children}</main>
+        <SonnerToaster richColors closeButton position="top-right" />
         <footer className="bg-gray-900 text-white py-12 mt-12">
           <div className="container mx-auto px-4">
             <div className="grid md:grid-cols-4 gap-8">

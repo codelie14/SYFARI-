@@ -7,10 +7,12 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Plus, TrendingUp, Users, Wallet, Send, Download, Eye, Settings } from 'lucide-react'
+import { toast } from 'sonner'
 
 export default function DashboardPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
+  const [plan, setPlan] = useState(null)
   const [stats, setStats] = useState({ 
     groupes: 0, 
     solde: 0, 
@@ -19,6 +21,8 @@ export default function DashboardPage() {
   })
   const [recentTransactions, setRecentTransactions] = useState([])
   const [groupes, setGroupes] = useState([])
+  const [allGroupes, setAllGroupes] = useState([])
+  const [allTransactions, setAllTransactions] = useState([])
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -43,15 +47,18 @@ export default function DashboardPage() {
       }
       localStorage.setItem('plan', userData.plan)
       localStorage.setItem('user', JSON.stringify(userData))
+      setPlan(userData.plan)
 
       // Charger les groupes
       const groupesRes = await fetch('/api/groupes', { headers })
       const groupesData = groupesRes.ok ? await groupesRes.json() : []
+      setAllGroupes(Array.isArray(groupesData) ? groupesData : [])
       setGroupes(groupesData.slice(0, 3))
 
       // Charger les transactions
       const transRes = await fetch('/api/transactions', { headers })
       const transData = transRes.ok ? await transRes.json() : []
+      setAllTransactions(Array.isArray(transData) ? transData : [])
       setRecentTransactions(transData.slice(0, 5))
 
       // Calculer les stats
@@ -87,6 +94,114 @@ export default function DashboardPage() {
     return status === 'completed' || status === 'valide' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
   }
 
+  const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  }[c]))
+
+  const openDashboardReport = () => {
+    if (!plan || (plan !== 'standard' && plan !== 'premium')) {
+      router.push('/pricing?onboarding=1&next=%2Fdashboard')
+      return
+    }
+
+    const title = 'Rapport — Tableau de bord'
+    const now = new Date().toLocaleString('fr-FR')
+    const groupsRows = allGroupes.map((g) => `
+      <tr>
+        <td>${escapeHtml(g.nom || '—')}</td>
+        <td style="text-align:right">${escapeHtml(Number(g.nb_membres || 0).toLocaleString('fr-FR'))}</td>
+        <td style="text-align:right">${escapeHtml(Number(g.solde || 0).toLocaleString('fr-FR'))} F</td>
+        <td>${escapeHtml(g.frequence_cotisation || '—')}</td>
+      </tr>
+    `).join('')
+
+    const txRows = allTransactions.slice(0, 100).map((t) => `
+      <tr>
+        <td>${escapeHtml(t.date_transaction ? new Date(t.date_transaction).toLocaleDateString('fr-FR') : '—')}</td>
+        <td>${escapeHtml(t.groupe_nom || '—')}</td>
+        <td>${escapeHtml(`${t.membre_prenom || ''} ${t.membre_nom || ''}`.trim() || '—')}</td>
+        <td>${escapeHtml(t.type || '—')}</td>
+        <td style="text-align:right">${escapeHtml(Number(t.montant || 0).toLocaleString('fr-FR'))} F</td>
+        <td>${escapeHtml(t.statut === 'completed' || t.statut === 'valide' ? 'Validée' : 'En attente')}</td>
+      </tr>
+    `).join('')
+
+    const html = `<!doctype html>
+      <html lang="fr">
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>${escapeHtml(title)}</title>
+        <style>
+          body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;padding:24px;color:#111}
+          h1{font-size:18px;margin:0 0 6px}
+          h2{font-size:14px;margin:18px 0 8px}
+          .meta{color:#555;font-size:12px;margin-bottom:16px}
+          .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+          .kpi{border:1px solid #ddd;border-radius:10px;padding:10px}
+          .kpi .label{color:#555;font-size:11px}
+          .kpi .value{font-size:16px;font-weight:700;margin-top:4px}
+          table{width:100%;border-collapse:collapse;font-size:12px}
+          th,td{border:1px solid #ddd;padding:8px;vertical-align:top}
+          th{background:#f5f5f5;text-align:left}
+          @media print{body{padding:0} .no-print{display:none} .grid{grid-template-columns:repeat(2,1fr)}}
+        </style>
+      </head>
+      <body>
+        <div class="no-print" style="margin-bottom:12px">
+          <button onclick="window.print()">Imprimer / Enregistrer en PDF</button>
+        </div>
+        <h1>${escapeHtml(title)}</h1>
+        <div class="meta">Généré le ${escapeHtml(now)}</div>
+        <div class="grid">
+          <div class="kpi"><div class="label">Groupes</div><div class="value">${escapeHtml(stats.groupes)}</div></div>
+          <div class="kpi"><div class="label">Solde total</div><div class="value">${escapeHtml(Number(stats.solde || 0).toLocaleString('fr-FR'))} F</div></div>
+          <div class="kpi"><div class="label">Transactions</div><div class="value">${escapeHtml(stats.transactions)}</div></div>
+          <div class="kpi"><div class="label">Membres</div><div class="value">${escapeHtml(stats.membres)}</div></div>
+        </div>
+        <h2>Groupes (${escapeHtml(String(allGroupes.length))})</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Nom</th>
+              <th style="text-align:right">Membres</th>
+              <th style="text-align:right">Solde</th>
+              <th>Fréquence</th>
+            </tr>
+          </thead>
+          <tbody>${groupsRows}</tbody>
+        </table>
+        <h2>Transactions (100 dernières)</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Groupe</th>
+              <th>Membre</th>
+              <th>Type</th>
+              <th style="text-align:right">Montant</th>
+              <th>Statut</th>
+            </tr>
+          </thead>
+          <tbody>${txRows}</tbody>
+        </table>
+      </body>
+      </html>`
+
+    const w = window.open('', '_blank', 'noopener,noreferrer')
+    if (!w) {
+      toast.error('Popup bloquée par le navigateur')
+      return
+    }
+    w.document.open()
+    w.document.write(html)
+    w.document.close()
+  }
+
   return (
     <div className="container mx-auto px-4 py-8 animate-in fade-in duration-500">
       <div className="flex justify-between items-center mb-8">
@@ -95,11 +210,11 @@ export default function DashboardPage() {
           <p className="text-gray-600">Bienvenue ! Voici un aperçu de votre activité</p>
         </div>
         <div className="flex gap-2">
-          <Button className="bg-orange-500 hover:bg-orange-600" size="sm">
+          <Button className="bg-orange-500 hover:bg-orange-600" size="sm" onClick={() => router.push('/groupes?create=1')}>
             <Plus className="w-4 h-4 mr-2" />
             Nouveau groupe
           </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={openDashboardReport}>
             <Download className="w-4 h-4 mr-2" />
             Rapport
           </Button>
@@ -170,7 +285,7 @@ export default function DashboardPage() {
                   <div className="p-4 text-center text-gray-500">Aucune transaction</div>
                 )}
               </div>
-              <Button variant="outline" className="w-full mt-4">
+              <Button variant="outline" className="w-full mt-4" onClick={() => router.push('/transactions')}>
                 Voir toutes les transactions
               </Button>
             </CardContent>
@@ -184,19 +299,19 @@ export default function DashboardPage() {
               <CardTitle>Actions rapides</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button className="w-full bg-orange-500 hover:bg-orange-600 justify-start" size="sm">
+              <Button className="w-full bg-orange-500 hover:bg-orange-600 justify-start" size="sm" onClick={() => router.push('/groupes?create=1')}>
                 <Plus className="w-4 h-4 mr-2" />
                 Créer un groupe
               </Button>
-              <Button className="w-full" variant="outline" size="sm">
+              <Button className="w-full" variant="outline" size="sm" onClick={() => router.push('/transactions')}>
                 <Send className="w-4 h-4 mr-2" />
                 Envoyer une cotisation
               </Button>
-              <Button className="w-full" variant="outline" size="sm">
+              <Button className="w-full" variant="outline" size="sm" onClick={() => router.push('/groupes')}>
                 <Users className="w-4 h-4 mr-2" />
                 Inviter des membres
               </Button>
-              <Button className="w-full" variant="outline" size="sm">
+              <Button className="w-full" variant="outline" size="sm" onClick={() => router.push('/settings')}>
                 <Settings className="w-4 h-4 mr-2" />
                 Paramètres
               </Button>

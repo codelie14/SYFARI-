@@ -18,6 +18,7 @@ export default function PricingSelector({ plans }) {
   const [open, setOpen] = useState(false)
   const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [paymentNotice, setPaymentNotice] = useState(null)
+  const [checkoutError, setCheckoutError] = useState(null)
 
   const onboarding = searchParams.get('onboarding') === '1'
   const planQuery = searchParams.get('plan')
@@ -46,29 +47,32 @@ export default function PricingSelector({ plans }) {
   }, [isAuth, planQuery, plans])
 
   useEffect(() => {
-    if (!paymentQuery) return
-
     if (paymentQuery === 'cancel') {
+      localStorage.removeItem('pending_payment_token')
       setPaymentNotice({ type: 'warning', title: 'Paiement annulé', text: 'Vous pouvez relancer le paiement quand vous voulez.' })
       return
     }
 
-    if (paymentQuery !== 'success') return
+    const shouldTryConfirm = paymentQuery === 'success' || !!tokenQuery
+    if (!shouldTryConfirm) return
 
-    if (!tokenQuery) {
+    const fallbackToken = localStorage.getItem('pending_payment_token')
+    const effectiveToken = tokenQuery || fallbackToken
+
+    if (!effectiveToken) {
       setPaymentNotice({ type: 'warning', title: 'Paiement en cours', text: 'Nous attendons la confirmation du paiement.' })
-      return
-    }
-
-    if (!isAuth) {
-      setPaymentNotice({ type: 'warning', title: 'Connexion requise', text: 'Connectez-vous pour finaliser l’activation de votre forfait.' })
       return
     }
 
     const run = async () => {
       try {
+        if (!isAuth) {
+          setPaymentNotice({ type: 'warning', title: 'Connexion requise', text: 'Connectez-vous pour finaliser l’activation de votre forfait.' })
+          return
+        }
+
         const authToken = localStorage.getItem('token')
-        const res = await fetch(`/api/payments/status?token=${encodeURIComponent(tokenQuery)}`, {
+        const res = await fetch(`/api/payments/status?token=${encodeURIComponent(effectiveToken)}`, {
           headers: { Authorization: `Bearer ${authToken}` },
         })
         const data = await res.json()
@@ -79,6 +83,7 @@ export default function PricingSelector({ plans }) {
 
         if (data.status === 'COMPLETED') {
           localStorage.setItem('plan', data.plan_id)
+          localStorage.removeItem('pending_payment_token')
           setCurrentPlanId(data.plan_id)
 
           const userRaw = localStorage.getItem('user')
@@ -115,6 +120,7 @@ export default function PricingSelector({ plans }) {
       return
     }
     setSelectedPlanId(planId)
+    setCheckoutError(null)
     setOpen(true)
   }
 
@@ -128,8 +134,15 @@ export default function PricingSelector({ plans }) {
     }
 
     setCheckoutLoading(true)
+    setCheckoutError(null)
     try {
       const authToken = localStorage.getItem('token')
+      if (!authToken) {
+        setCheckoutError('Connexion requise')
+        toast.error('Connexion requise')
+        return
+      }
+
       const res = await fetch('/api/payments/checkout', {
         method: 'POST',
         headers: {
@@ -143,13 +156,19 @@ export default function PricingSelector({ plans }) {
       })
       const data = await res.json()
       if (!res.ok) {
-        toast.error(data?.error || 'Erreur lors du paiement')
+        const msg = data?.error || 'Erreur lors du paiement'
+        setCheckoutError(msg)
+        toast.error(msg)
         return
       }
 
       setOpen(false)
+      if (data?.token) {
+        localStorage.setItem('pending_payment_token', data.token)
+      }
       window.location.href = data.invoice_url
     } catch {
+      setCheckoutError('Erreur de connexion')
       toast.error('Erreur de connexion')
     } finally {
       setCheckoutLoading(false)
@@ -261,6 +280,11 @@ export default function PricingSelector({ plans }) {
                 </div>
                 <div className="text-sm text-gray-600 mt-1">{selectedPlan.desc}</div>
               </div>
+              {checkoutError && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {checkoutError}
+                </div>
+              )}
               <ul className="space-y-2 text-sm text-gray-700">
                 {selectedPlan.features.slice(0, 4).map((f) => (
                   <li key={f} className="flex items-start gap-2">

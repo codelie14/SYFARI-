@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useEffect, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Plus, Users, Wallet, TrendingUp, Settings, Share2, Eye, Trash2, Edit2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -11,8 +11,9 @@ import { Label } from '@/components/ui/label'
 import Loader from '@/components/loader'
 import { toast } from 'sonner'
 
-export default function GroupesPage() {
+function GroupesPageContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState({
@@ -29,8 +30,11 @@ export default function GroupesPage() {
       router.push('/landing')
       return
     }
+    if (searchParams.get('create') === '1') {
+      setShowForm(true)
+    }
     loadGroupes()
-  }, [router])
+  }, [router, searchParams])
 
   const ensureActivePlan = async () => {
     const token = localStorage.getItem('token')
@@ -311,5 +315,13 @@ export default function GroupesPage() {
         </Card>
       )}
     </div>
+  )
+}
+
+export default function GroupesPage() {
+  return (
+    <Suspense fallback={<Loader text="Chargement..." />}>
+      <GroupesPageContent />
+    </Suspense>
   )
 }

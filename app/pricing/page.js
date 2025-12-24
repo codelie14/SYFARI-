@@ -27,7 +27,7 @@ export default function PricingPage() {
       desc: "Jusqu'à 50 membres",
       highlighted: true,
       features: [
-        'Groupes illimités',
+        '15 Groupes',
         'Cotisations et retraits',
         'Exports (CSV/PDF) basiques',
         'Votes et décisions du groupe',
