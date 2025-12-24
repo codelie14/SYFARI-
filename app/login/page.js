@@ -36,6 +36,9 @@ function LoginInner() {
       if (res.ok) {
         localStorage.setItem('token', data.token)
         localStorage.setItem('user', JSON.stringify(data.user || formData))
+        if (data.user?.plan) {
+          localStorage.setItem('plan', data.user.plan)
+        }
         const nextUrl = searchParams.get('next')
         const planFromQuery = searchParams.get('plan')
 
@@ -54,7 +57,7 @@ function LoginInner() {
           return
         }
 
-        const plan = localStorage.getItem('plan')
+        const plan = data.user?.plan || localStorage.getItem('plan')
         router.push(plan ? '/dashboard' : '/pricing?onboarding=1&next=%2Fdashboard')
       } else {
         alert(data.error || 'Erreur d\'authentification')

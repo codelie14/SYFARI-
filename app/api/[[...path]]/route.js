@@ -30,6 +30,63 @@ const ensureDbInitialized = async () => {
   await state.initializing;
 };
 
+const getBaseUrl = (request) => {
+  const envBase = process.env.NEXT_PUBLIC_BASE_URL;
+  if (envBase) return envBase.replace(/\/$/, '');
+  const host = request.headers.get('x-forwarded-host') || request.headers.get('host');
+  const proto = request.headers.get('x-forwarded-proto') || 'http';
+  if (!host) return 'http://localhost:3000';
+  return `${proto}://${host}`;
+};
+
+const getPaydunyaApiBaseUrl = () => {
+  const mode = (process.env.PAYDUNYA_MODE || 'test').toLowerCase();
+  return mode === 'live'
+    ? 'https://app.paydunya.com/api/v1'
+    : 'https://app.paydunya.com/sandbox-api/v1';
+};
+
+const getPaydunyaHeaders = () => {
+  const masterKey = process.env.PAYDUNYA_MASTER_KEY;
+  const privateKey = process.env.PAYDUNYA_PRIVATE_KEY;
+  const token = process.env.PAYDUNYA_TOKEN;
+  return {
+    'Content-Type': 'application/json',
+    'PAYDUNYA-MASTER-KEY': masterKey,
+    'PAYDUNYA-PRIVATE-KEY': privateKey,
+    'PAYDUNYA-TOKEN': token,
+  };
+};
+
+const paydunyaFetch = async (path, { method = 'GET', body } = {}) => {
+  const headers = getPaydunyaHeaders();
+  if (!headers['PAYDUNYA-MASTER-KEY'] || !headers['PAYDUNYA-PRIVATE-KEY'] || !headers['PAYDUNYA-TOKEN']) {
+    throw new Error('Clés PayDunya manquantes dans .env');
+  }
+  const res = await fetch(`${getPaydunyaApiBaseUrl()}${path}`, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    const msg = data?.response_text || data?.message || 'Erreur PayDunya';
+    throw new Error(msg);
+  }
+  return data;
+};
+
+const getPlanPricing = (planId) => {
+  const prices = {
+    basique: 2000,
+    standard: 5000,
+    premium: 10000,
+  };
+  const amount = prices[planId];
+  if (!amount) return null;
+  return { amount, currency: 'XOF' };
+};
+
 // Helper pour les réponses d'erreur
 const errorResponse = (message, status = 400) => {
   return NextResponse.json({ error: message }, { status });
@@ -68,6 +125,54 @@ export async function GET(request, { params }) {
       }
       const userData = await getUserById(user.id);
       return successResponse(userData);
+    }
+
+    // GET /api/payments/status?token=... - Vérifier un paiement PayDunya
+    if (endpoint === 'payments/status') {
+      const user = getUserFromToken(request);
+      if (!user) {
+        return errorResponse('Non authentifié', 401);
+      }
+
+      const token = searchParams.get('token');
+      if (!token) {
+        return errorResponse('token requis', 400);
+      }
+
+      const paymentRes = await query(
+        'SELECT * FROM payments WHERE provider = $1 AND provider_token = $2',
+        ['paydunya', token]
+      );
+      if (paymentRes.rows.length === 0) {
+        return errorResponse('Paiement introuvable', 404);
+      }
+      const payment = paymentRes.rows[0];
+      if (payment.user_id !== user.id) {
+        return errorResponse('Non autorisé', 403);
+      }
+
+      const confirm = await paydunyaFetch(`/checkout-invoice/confirm/${encodeURIComponent(token)}`);
+      const status = (confirm?.status || confirm?.data?.status || '').toUpperCase();
+      const normalized = status || 'PENDING';
+      const transactionId = confirm?.transaction_id || confirm?.data?.transaction_id || null;
+
+      await query(
+        `UPDATE payments
+         SET status = $1, transaction_id = COALESCE($2, transaction_id), updated_at = CURRENT_TIMESTAMP
+         WHERE id = $3`,
+        [normalized, transactionId, payment.id]
+      );
+
+      if (normalized === 'COMPLETED') {
+        await query('UPDATE users SET plan = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [payment.plan_id, user.id]);
+      }
+
+      return successResponse({
+        status: normalized,
+        plan_id: payment.plan_id,
+        amount: payment.amount,
+        transaction_id: transactionId,
+      });
     }
 
     // GET /api/groupes - Liste des groupes
@@ -235,7 +340,114 @@ export async function POST(request, { params }) {
   const endpoint = path.join('/');
 
   try {
-    const body = await request.json();
+    const contentType = request.headers.get('content-type') || '';
+    const body = contentType.includes('application/json')
+      ? await request.json()
+      : Object.fromEntries(new URLSearchParams(await request.text()));
+
+    // POST /api/paydunya/callback - Callback PayDunya (IPN)
+    if (endpoint === 'paydunya/callback') {
+      const token =
+        body['data[token]'] ||
+        body['token'] ||
+        body['data']?.token ||
+        null;
+
+      if (!token) {
+        return errorResponse('token requis', 400);
+      }
+
+      const paymentRes = await query(
+        'SELECT * FROM payments WHERE provider = $1 AND provider_token = $2',
+        ['paydunya', token]
+      );
+      if (paymentRes.rows.length === 0) {
+        return errorResponse('Paiement introuvable', 404);
+      }
+      const payment = paymentRes.rows[0];
+
+      const confirm = await paydunyaFetch(`/checkout-invoice/confirm/${encodeURIComponent(token)}`);
+      const status = (confirm?.status || confirm?.data?.status || '').toUpperCase();
+      const normalized = status || 'PENDING';
+      const transactionId = confirm?.transaction_id || confirm?.data?.transaction_id || null;
+
+      await query(
+        `UPDATE payments
+         SET status = $1, transaction_id = COALESCE($2, transaction_id), updated_at = CURRENT_TIMESTAMP
+         WHERE id = $3`,
+        [normalized, transactionId, payment.id]
+      );
+
+      if (normalized === 'COMPLETED') {
+        await query(
+          'UPDATE users SET plan = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+          [payment.plan_id, payment.user_id]
+        );
+      }
+
+      return successResponse({ message: 'Callback reçu', status: normalized });
+    }
+
+    // POST /api/payments/checkout - Créer une facture PayDunya
+    if (endpoint === 'payments/checkout') {
+      const user = getUserFromToken(request);
+      if (!user) {
+        return errorResponse('Non authentifié', 401);
+      }
+
+      const { plan_id, next } = body;
+      const pricing = getPlanPricing(plan_id);
+      if (!plan_id || !pricing) {
+        return errorResponse('plan_id invalide');
+      }
+
+      const baseUrl = getBaseUrl(request);
+      const nextPath = typeof next === 'string' && next.startsWith('/') ? next : '/dashboard';
+
+      const invoice = await paydunyaFetch('/checkout-invoice/create', {
+        method: 'POST',
+        body: {
+          invoice: {
+            total_amount: pricing.amount,
+            description: `Abonnement SYFARI - ${plan_id}`,
+            customer: {
+              name: `${user.prenom || ''} ${user.nom || ''}`.trim() || user.email,
+              email: user.email,
+            },
+          },
+          store: {
+            name: 'SYFARI',
+            website_url: baseUrl,
+          },
+          actions: {
+            callback_url: `${baseUrl}/api/paydunya/callback`,
+            return_url: `${baseUrl}/pricing?payment=success&next=${encodeURIComponent(nextPath)}`,
+            cancel_url: `${baseUrl}/pricing?payment=cancel&next=${encodeURIComponent(nextPath)}`,
+          },
+          custom_data: {
+            user_id: user.id,
+            plan_id,
+          },
+        },
+      });
+
+      const responseCode = invoice?.response_code;
+      const token = invoice?.token;
+      const invoiceUrl = invoice?.response_text || invoice?.invoice_url;
+      if (responseCode !== '00' || !token || !invoiceUrl) {
+        return errorResponse(invoice?.response_text || 'Erreur lors de la création de la facture');
+      }
+
+      await query(
+        `INSERT INTO payments (user_id, plan_id, amount, provider, provider_token, status)
+         VALUES ($1, $2, $3, 'paydunya', $4, 'PENDING')
+         ON CONFLICT (provider_token) DO UPDATE
+         SET plan_id = EXCLUDED.plan_id, amount = EXCLUDED.amount, updated_at = CURRENT_TIMESTAMP`,
+        [user.id, plan_id, pricing.amount, token]
+      );
+
+      return successResponse({ token, invoice_url: invoiceUrl });
+    }
 
     // POST /api/auth/register - Inscription
     if (endpoint === 'auth/register') {
@@ -475,6 +687,32 @@ export async function PUT(request, { params }) {
     const user = getUserFromToken(request);
     if (!user) {
       return errorResponse('Non authentifié', 401);
+    }
+
+    // PUT /api/user - Mettre à jour le profil
+    if (endpoint === 'user') {
+      const { prenom, nom, email, telephone } = body;
+
+      try {
+        const result = await query(
+          `UPDATE users
+           SET prenom = COALESCE($1, prenom),
+               nom = COALESCE($2, nom),
+               email = COALESCE($3, email),
+               telephone = COALESCE($4, telephone),
+               updated_at = CURRENT_TIMESTAMP
+           WHERE id = $5
+           RETURNING id, email, nom, prenom, telephone, plan, role, created_at`,
+          [prenom, nom, email, telephone, user.id]
+        );
+
+        return successResponse(result.rows[0]);
+      } catch (error) {
+        if (error.code === '23505') {
+          return errorResponse('Cet email est déjà utilisé', 409);
+        }
+        throw error;
+      }
     }
 
     // PUT /api/groupes/:id - Modifier un groupe

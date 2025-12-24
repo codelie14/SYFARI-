@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { toast } from 'sonner'
 
 export default function PricingSelector({ plans }) {
   const router = useRouter()
@@ -15,10 +16,14 @@ export default function PricingSelector({ plans }) {
   const [currentPlanId, setCurrentPlanId] = useState(null)
   const [selectedPlanId, setSelectedPlanId] = useState(null)
   const [open, setOpen] = useState(false)
+  const [checkoutLoading, setCheckoutLoading] = useState(false)
+  const [paymentNotice, setPaymentNotice] = useState(null)
 
   const onboarding = searchParams.get('onboarding') === '1'
   const planQuery = searchParams.get('plan')
   const nextQuery = searchParams.get('next')
+  const paymentQuery = searchParams.get('payment')
+  const tokenQuery = searchParams.get('token')
 
   const selectedPlan = useMemo(
     () => plans.find((p) => p.id === selectedPlanId) || null,
@@ -40,6 +45,69 @@ export default function PricingSelector({ plans }) {
     setOpen(true)
   }, [isAuth, planQuery, plans])
 
+  useEffect(() => {
+    if (!paymentQuery) return
+
+    if (paymentQuery === 'cancel') {
+      setPaymentNotice({ type: 'warning', title: 'Paiement annulé', text: 'Vous pouvez relancer le paiement quand vous voulez.' })
+      return
+    }
+
+    if (paymentQuery !== 'success') return
+
+    if (!tokenQuery) {
+      setPaymentNotice({ type: 'warning', title: 'Paiement en cours', text: 'Nous attendons la confirmation du paiement.' })
+      return
+    }
+
+    if (!isAuth) {
+      setPaymentNotice({ type: 'warning', title: 'Connexion requise', text: 'Connectez-vous pour finaliser l’activation de votre forfait.' })
+      return
+    }
+
+    const run = async () => {
+      try {
+        const authToken = localStorage.getItem('token')
+        const res = await fetch(`/api/payments/status?token=${encodeURIComponent(tokenQuery)}`, {
+          headers: { Authorization: `Bearer ${authToken}` },
+        })
+        const data = await res.json()
+        if (!res.ok) {
+          toast.error(data?.error || 'Impossible de vérifier le paiement')
+          return
+        }
+
+        if (data.status === 'COMPLETED') {
+          localStorage.setItem('plan', data.plan_id)
+          setCurrentPlanId(data.plan_id)
+
+          const userRaw = localStorage.getItem('user')
+          if (userRaw) {
+            try {
+              const parsed = JSON.parse(userRaw)
+              localStorage.setItem('user', JSON.stringify({ ...parsed, plan: data.plan_id }))
+            } catch {
+            }
+          }
+
+          toast.success('Forfait activé')
+          router.push(nextQuery || '/dashboard')
+          return
+        }
+
+        setPaymentNotice({
+          type: 'warning',
+          title: 'Paiement non confirmé',
+          text: 'Le paiement est encore en cours. Réessayez dans quelques instants.',
+        })
+      } catch {
+        toast.error('Erreur de connexion')
+      }
+    }
+
+    run()
+  }, [isAuth, nextQuery, paymentQuery, router, tokenQuery])
+
   const startCheckout = (planId) => {
     if (!isAuth) {
       const returnUrl = `/pricing?onboarding=1&plan=${encodeURIComponent(planId)}&next=${encodeURIComponent('/dashboard')}`
@@ -50,23 +118,42 @@ export default function PricingSelector({ plans }) {
     setOpen(true)
   }
 
-  const confirmPlan = () => {
+  const confirmPlan = async () => {
     if (!selectedPlan) return
 
-    localStorage.setItem('plan', selectedPlan.id)
-    setCurrentPlanId(selectedPlan.id)
-
-    const userRaw = localStorage.getItem('user')
-    if (userRaw) {
-      try {
-        const parsed = JSON.parse(userRaw)
-        localStorage.setItem('user', JSON.stringify({ ...parsed, plan: selectedPlan.id }))
-      } catch {
-      }
+    if (currentPlanId === selectedPlan.id) {
+      setOpen(false)
+      router.push(nextQuery || '/dashboard')
+      return
     }
 
-    setOpen(false)
-    router.push(nextQuery || '/dashboard')
+    setCheckoutLoading(true)
+    try {
+      const authToken = localStorage.getItem('token')
+      const res = await fetch('/api/payments/checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          plan_id: selectedPlan.id,
+          next: nextQuery || '/dashboard',
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        toast.error(data?.error || 'Erreur lors du paiement')
+        return
+      }
+
+      setOpen(false)
+      window.location.href = data.invoice_url
+    } catch {
+      toast.error('Erreur de connexion')
+    } finally {
+      setCheckoutLoading(false)
+    }
   }
 
   return (
@@ -88,6 +175,13 @@ export default function PricingSelector({ plans }) {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {paymentNotice && (
+        <div className="max-w-4xl mx-auto mb-6 p-4 rounded-lg border bg-blue-50 border-blue-200">
+          <div className="font-semibold text-blue-900">{paymentNotice.title}</div>
+          <div className="text-sm text-blue-800 mt-1">{paymentNotice.text}</div>
         </div>
       )}
 
@@ -136,8 +230,9 @@ export default function PricingSelector({ plans }) {
                   className={`w-full ${plan.highlighted ? 'bg-orange-500 hover:bg-orange-600' : ''}`}
                   variant={plan.highlighted ? 'default' : 'outline'}
                   onClick={() => startCheckout(plan.id)}
+                  disabled={active}
                 >
-                  Choisir ce forfait
+                  {active ? 'Forfait actif' : 'Choisir ce forfait'}
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </CardContent>
@@ -181,8 +276,8 @@ export default function PricingSelector({ plans }) {
             <Button variant="outline" onClick={() => setOpen(false)}>
               Annuler
             </Button>
-            <Button className="bg-orange-500 hover:bg-orange-600" onClick={confirmPlan} disabled={!selectedPlan}>
-              Confirmer
+            <Button className="bg-orange-500 hover:bg-orange-600" onClick={confirmPlan} disabled={!selectedPlan || checkoutLoading}>
+              {checkoutLoading ? 'Redirection...' : 'Confirmer'}
             </Button>
           </DialogFooter>
         </DialogContent>
