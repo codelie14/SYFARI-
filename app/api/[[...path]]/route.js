@@ -719,7 +719,7 @@ export async function POST(request, { params }) {
       const { error } = await getActivePlanUser(user.id);
       if (error) return error;
 
-      const { groupe_id, montant, type, description } = body;
+      const { groupe_id, montant, type, description, membre_id } = body;
 
       if (!groupe_id || !montant || !type) {
         return errorResponse('groupe_id, montant et type requis');
@@ -752,12 +752,30 @@ export async function POST(request, { params }) {
         return errorResponse('Seul le responsable peut effectuer un retrait', 403);
       }
 
+      let targetMemberId = user.id;
+      if (membre_id) {
+        if (!isResponsable) {
+          return errorResponse('Seul le responsable peut enregistrer une cotisation pour un membre', 403);
+        }
+        if (type === 'retrait') {
+          return errorResponse('membre_id invalide pour un retrait', 400);
+        }
+        const membershipRes = await query(
+          'SELECT 1 FROM groupe_membres WHERE groupe_id = $1 AND user_id = $2 LIMIT 1',
+          [groupe_id, membre_id]
+        );
+        if (membershipRes.rows.length === 0) {
+          return errorResponse('Le membre ne fait pas partie du groupe', 400);
+        }
+        targetMemberId = membre_id;
+      }
+
       // Créer la transaction
       const result = await query(`
         INSERT INTO transactions (groupe_id, membre_id, montant, type, description)
         VALUES ($1, $2, $3, $4, $5)
         RETURNING *
-      `, [groupe_id, user.id, montantNumber, type, description]);
+      `, [groupe_id, targetMemberId, montantNumber, type, description]);
 
       // Mettre à jour le solde du groupe
       if (type === 'cotisation') {

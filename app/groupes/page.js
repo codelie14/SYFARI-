@@ -6,6 +6,8 @@ import { Plus, Users, Wallet, TrendingUp, Settings, Share2, Eye, Trash2, Edit2 }
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import Loader from '@/components/loader'
@@ -16,6 +18,7 @@ function GroupesPageContent() {
   const searchParams = useSearchParams()
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
+  const [user, setUser] = useState(null)
   const [formData, setFormData] = useState({
     nom: '',
     description: '',
@@ -23,6 +26,15 @@ function GroupesPageContent() {
     frequence: 'mensuelle',
   })
   const [groupes, setGroupes] = useState([])
+  const [editOpen, setEditOpen] = useState(false)
+  const [editSubmitting, setEditSubmitting] = useState(false)
+  const [editTarget, setEditTarget] = useState(null)
+  const [editForm, setEditForm] = useState({
+    nom: '',
+    description: '',
+    cotisation: '',
+    frequence: 'mensuelle',
+  })
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -48,6 +60,7 @@ function GroupesPageContent() {
     }
     localStorage.setItem('plan', userData.plan)
     localStorage.setItem('user', JSON.stringify(userData))
+    setUser(userData)
     return true
   }
 
@@ -113,6 +126,90 @@ function GroupesPageContent() {
       loadGroupes()
     } catch (error) {
       toast.error('Erreur de connexion')
+    }
+  }
+
+  const openEditDialog = (groupe) => {
+    if (!user || String(groupe.responsable_id || '') !== String(user.id || '')) {
+      toast.error('Seul le responsable peut modifier ce groupe')
+      return
+    }
+    setEditTarget(groupe)
+    setEditForm({
+      nom: groupe.nom || '',
+      description: groupe.description || '',
+      cotisation: String(Number(groupe.montant_cotisation || 0) || ''),
+      frequence: groupe.frequence_cotisation || 'mensuelle',
+    })
+    setEditOpen(true)
+  }
+
+  const submitEdit = async () => {
+    if (!editTarget) return
+    setEditSubmitting(true)
+    try {
+      const token = localStorage.getItem('token')
+      const res = await fetch(`/api/groupes/${editTarget.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          nom: editForm.nom,
+          description: editForm.description,
+          montant_cotisation: Number(editForm.cotisation),
+          frequence_cotisation: editForm.frequence,
+        }),
+      })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) {
+        toast.error(data?.error || 'Impossible de modifier le groupe')
+        return
+      }
+      toast.success('Groupe modifié')
+      setEditOpen(false)
+      setEditTarget(null)
+      await loadGroupes()
+    } catch {
+      toast.error('Erreur de connexion')
+    } finally {
+      setEditSubmitting(false)
+    }
+  }
+
+  const deleteGroupe = async (groupeId) => {
+    if (!user || !groupeId) return
+    const groupe = groupes.find((g) => String(g.id) === String(groupeId))
+    if (!groupe || String(groupe.responsable_id || '') !== String(user.id || '')) {
+      toast.error('Seul le responsable peut supprimer ce groupe')
+      return
+    }
+    try {
+      const token = localStorage.getItem('token')
+      const res = await fetch(`/api/groupes/${groupeId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) {
+        toast.error(data?.error || 'Impossible de supprimer le groupe')
+        return
+      }
+      toast.success('Groupe supprimé')
+      await loadGroupes()
+    } catch {
+      toast.error('Erreur de connexion')
+    }
+  }
+
+  const shareGroupe = async (groupeId) => {
+    try {
+      const url = `${window.location.origin}/groupes/${groupeId}`
+      await navigator.clipboard.writeText(url)
+      toast.success('Lien copié')
+    } catch {
+      toast.error('Impossible de copier le lien')
     }
   }
 
@@ -238,12 +335,28 @@ function GroupesPageContent() {
                   </div>
                 </div>
                 <div className="flex gap-1">
-                  <Button variant="ghost" size="sm">
+                  <Button variant="ghost" size="sm" onClick={() => openEditDialog(groupe)}>
                     <Edit2 className="w-4 h-4" />
                   </Button>
-                  <Button variant="ghost" size="sm">
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="sm">
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Supprimer ce groupe ?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Cette action supprime le groupe et ses données associées.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Annuler</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => deleteGroupe(groupe.id)}>Supprimer</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </div>
             </CardHeader>
@@ -291,7 +404,7 @@ function GroupesPageContent() {
                   <Eye className="w-4 h-4 mr-2" />
                   Détails
                 </Button>
-                <Button variant="outline" className="flex-1" size="sm">
+                <Button variant="outline" className="flex-1" size="sm" onClick={() => shareGroupe(groupe.id)}>
                   <Share2 className="w-4 h-4 mr-2" />
                   Partager
                 </Button>
@@ -314,6 +427,69 @@ function GroupesPageContent() {
           </CardContent>
         </Card>
       )}
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Modifier le groupe</DialogTitle>
+            <DialogDescription>Mettez à jour les informations du groupe.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-nom">Nom</Label>
+              <Input
+                id="edit-nom"
+                value={editForm.nom}
+                onChange={(e) => setEditForm((f) => ({ ...f, nom: e.target.value }))}
+                placeholder="Nom du groupe"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-cotisation">Cotisation (F CFA)</Label>
+              <Input
+                id="edit-cotisation"
+                type="number"
+                min="0"
+                value={editForm.cotisation}
+                onChange={(e) => setEditForm((f) => ({ ...f, cotisation: e.target.value }))}
+                placeholder="50000"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-frequence">Fréquence</Label>
+              <select
+                id="edit-frequence"
+                value={editForm.frequence}
+                onChange={(e) => setEditForm((f) => ({ ...f, frequence: e.target.value }))}
+                className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white"
+              >
+                <option value="journaliere">Journalière</option>
+                <option value="hebdomadaire">Hebdomadaire</option>
+                <option value="mensuelle">Mensuelle</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-description">Description</Label>
+              <textarea
+                id="edit-description"
+                value={editForm.description}
+                onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
+                className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                rows="3"
+                placeholder="Description du groupe..."
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setEditOpen(false)}>
+              Annuler
+            </Button>
+            <Button className="bg-orange-500 hover:bg-orange-600" onClick={submitEdit} disabled={editSubmitting}>
+              {editSubmitting ? 'Enregistrement...' : 'Enregistrer'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
