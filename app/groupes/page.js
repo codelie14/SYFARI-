@@ -9,63 +9,19 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import Loader from '@/components/loader'
+import { toast } from 'sonner'
 
 export default function GroupesPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [formData, setFormData] = useState({ nom: '', description: '', cotisation: '' })
-
-  const groupes = [
-    { 
-      id: 1, 
-      nom: 'Tontine Familiale', 
-      description: 'Groupe d\'épargne familial avec 12 membres',
-      membres: 12, 
-      solde: 500000, 
-      cotisation: 50000, 
-      progress: 75,
-      status: 'active',
-      dateCreation: '2024-01-01',
-      image: '👨‍👩‍👧‍👦'
-    },
-    { 
-      id: 2, 
-      nom: 'Association des Jeunes', 
-      description: 'Association de jeunes entrepreneurs pour l\'épargne collective',
-      membres: 25, 
-      solde: 800000, 
-      cotisation: 100000, 
-      progress: 60,
-      status: 'active',
-      dateCreation: '2023-12-15',
-      image: '👥'
-    },
-    { 
-      id: 3, 
-      nom: 'Tontine des Femmes', 
-      description: 'Groupe d\'épargne réservé aux femmes entrepreneures',
-      membres: 8, 
-      solde: 300000, 
-      cotisation: 25000, 
-      progress: 90,
-      status: 'active',
-      dateCreation: '2023-11-20',
-      image: '👩‍🦰'
-    },
-    { 
-      id: 4, 
-      nom: 'Groupe d\'Investissement', 
-      description: 'Pour les investissements à long terme',
-      membres: 15, 
-      solde: 1200000, 
-      cotisation: 150000, 
-      progress: 45,
-      status: 'pending',
-      dateCreation: '2024-01-05',
-      image: '💼'
-    },
-  ]
+  const [formData, setFormData] = useState({
+    nom: '',
+    description: '',
+    cotisation: '',
+    frequence: 'mensuelle',
+  })
+  const [groupes, setGroupes] = useState([])
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -73,16 +29,57 @@ export default function GroupesPage() {
       router.push('/landing')
       return
     }
-    setTimeout(() => {
-      setLoading(false)
-    }, 500)
+    loadGroupes()
   }, [router])
 
-  const handleSubmit = (e) => {
+  const loadGroupes = async () => {
+    try {
+      setLoading(true)
+      const token = localStorage.getItem('token')
+      const res = await fetch('/api/groupes', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = res.ok ? await res.json() : []
+      setGroupes(Array.isArray(data) ? data : [])
+    } catch (error) {
+      setGroupes([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    console.log('Nouveau groupe créé:', formData)
-    setFormData({ nom: '', description: '', cotisation: '' })
-    setShowForm(false)
+    try {
+      const token = localStorage.getItem('token')
+      const res = await fetch('/api/groupes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          nom: formData.nom,
+          description: formData.description,
+          montant_cotisation: Number(formData.cotisation),
+          frequence_cotisation: formData.frequence,
+        }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        toast.error(data?.error || 'Erreur lors de la création')
+        return
+      }
+
+      toast.success('Groupe créé avec succès')
+      setFormData({ nom: '', description: '', cotisation: '', frequence: 'mensuelle' })
+      setShowForm(false)
+      loadGroupes()
+    } catch (error) {
+      toast.error('Erreur de connexion')
+    }
   }
 
   if (loading) return <Loader text="Chargement des groupes..." />
@@ -133,6 +130,19 @@ export default function GroupesPage() {
                 </div>
               </div>
               <div>
+                <Label htmlFor="frequence">Fréquence</Label>
+                <select
+                  id="frequence"
+                  value={formData.frequence}
+                  onChange={(e) => setFormData({ ...formData, frequence: e.target.value })}
+                  className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white"
+                >
+                  <option value="journaliere">Journalière</option>
+                  <option value="hebdomadaire">Hebdomadaire</option>
+                  <option value="mensuelle">Mensuelle</option>
+                </select>
+              </div>
+              <div>
                 <Label htmlFor="description">Description</Label>
                 <textarea
                   id="description"
@@ -161,19 +171,19 @@ export default function GroupesPage() {
         <Card>
           <CardHeader>
             <CardDescription>Groupes actifs</CardDescription>
-            <CardTitle className="text-3xl font-bold text-orange-600">{groupes.filter(g => g.status === 'active').length}</CardTitle>
+            <CardTitle className="text-3xl font-bold text-orange-600">{groupes.filter(g => g.statut === 'actif').length}</CardTitle>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader>
             <CardDescription>Solde total</CardDescription>
-            <CardTitle className="text-3xl font-bold text-green-600">{(groupes.reduce((sum, g) => sum + g.solde, 0) / 1000000).toFixed(1)}M F</CardTitle>
+            <CardTitle className="text-3xl font-bold text-green-600">{(groupes.reduce((sum, g) => sum + Number(g.solde || 0), 0) / 1000000).toFixed(1)}M F</CardTitle>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader>
             <CardDescription>Membres totaux</CardDescription>
-            <CardTitle className="text-3xl font-bold text-blue-600">{groupes.reduce((sum, g) => sum + g.membres, 0)}</CardTitle>
+            <CardTitle className="text-3xl font-bold text-blue-600">{groupes.reduce((sum, g) => sum + Number(g.nb_membres || 0), 0)}</CardTitle>
           </CardHeader>
         </Card>
       </div>
@@ -185,11 +195,11 @@ export default function GroupesPage() {
             <CardHeader className="bg-gradient-to-br from-orange-50 to-blue-50">
               <div className="flex justify-between items-start">
                 <div className="flex items-start gap-3">
-                  <div className="text-4xl">{groupe.image}</div>
+                  <div className="text-4xl">👥</div>
                   <div>
                     <CardTitle>{groupe.nom}</CardTitle>
-                    <Badge className={groupe.status === 'active' ? 'bg-green-100 text-green-800 mt-2' : 'bg-yellow-100 text-yellow-800 mt-2'}>
-                      {groupe.status === 'active' ? 'Actif' : 'En attente'}
+                    <Badge className={groupe.statut === 'actif' ? 'bg-green-100 text-green-800 mt-2' : 'bg-yellow-100 text-yellow-800 mt-2'}>
+                      {groupe.statut === 'actif' ? 'Actif' : 'En attente'}
                     </Badge>
                   </div>
                 </div>
@@ -210,23 +220,34 @@ export default function GroupesPage() {
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div className="p-3 bg-blue-50 rounded-lg">
                   <p className="text-xs text-gray-600">Membres</p>
-                  <p className="text-xl font-bold text-blue-600">{groupe.membres}</p>
+                  <p className="text-xl font-bold text-blue-600">{groupe.nb_membres || 0}</p>
                 </div>
                 <div className="p-3 bg-green-50 rounded-lg">
                   <p className="text-xs text-gray-600">Solde</p>
-                  <p className="text-xl font-bold text-green-600">{groupe.solde.toLocaleString()} F</p>
+                  <p className="text-xl font-bold text-green-600">{Number(groupe.solde || 0).toLocaleString()} F</p>
                 </div>
               </div>
 
               <div>
                 <div className="flex justify-between items-center mb-2">
                   <p className="text-sm text-gray-600">Progression de cette semaine</p>
-                  <p className="text-sm font-bold text-orange-600">{groupe.progress}%</p>
+                  <p className="text-sm font-bold text-orange-600">
+                    {Math.min(
+                      100,
+                      ((Number(groupe.solde || 0) / (Number(groupe.montant_cotisation || 0) * Math.max(1, groupe.nb_membres || 0))) || 0) * 100
+                    ).toFixed(0)}
+                    %
+                  </p>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div 
                     className="bg-gradient-to-r from-orange-400 to-orange-600 h-2 rounded-full"
-                    style={{ width: `${groupe.progress}%` }}
+                    style={{ 
+                      width: `${Math.min(
+                        100,
+                        ((Number(groupe.solde || 0) / (Number(groupe.montant_cotisation || 0) * Math.max(1, groupe.nb_membres || 0))) || 0) * 100
+                      )}%` 
+                    }}
                   />
                 </div>
               </div>

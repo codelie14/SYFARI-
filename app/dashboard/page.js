@@ -46,7 +46,7 @@ export default function DashboardPage() {
       setRecentTransactions(transData.slice(0, 5))
 
       // Calculer les stats
-      const totalSolde = groupesData.reduce((sum, g) => sum + (g.solde_total || 0), 0)
+      const totalSolde = groupesData.reduce((sum, g) => sum + Number(g.solde || 0), 0)
       const totalMembres = groupesData.reduce((sum, g) => sum + (g.nb_membres || 0), 0)
 
       setStats({
@@ -75,7 +75,7 @@ export default function DashboardPage() {
   }
 
   const getStatusColor = (status) => {
-    return status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+    return status === 'completed' || status === 'valide' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
   }
 
   return (
@@ -142,14 +142,16 @@ export default function DashboardPage() {
                         <div className="text-2xl">{getTransactionIcon(tx.type)}</div>
                         <div>
                           <p className="font-semibold text-sm">{tx.groupe_nom || 'Groupe'}</p>
-                          <p className="text-xs text-gray-500">{new Date(tx.date).toLocaleDateString('fr-FR')}</p>
+                          <p className="text-xs text-gray-500">
+                            {tx.date_transaction ? new Date(tx.date_transaction).toLocaleDateString('fr-FR') : '—'}
+                          </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="text-right">
                           <p className="font-bold text-orange-600">{(tx.montant || 0).toLocaleString()} F</p>
                           <Badge className={`text-xs ${getStatusColor(tx.statut)}`}>
-                            {tx.statut === 'completed' ? 'Complétée' : 'En attente'}
+                            {tx.statut === 'completed' || tx.statut === 'valide' ? 'Validée' : 'En attente'}
                           </Badge>
                         </div>
                       </div>
@@ -225,12 +227,17 @@ export default function DashboardPage() {
                         <h3 className="font-semibold">{groupe.nom}</h3>
                         <p className="text-sm text-gray-600">{groupe.nb_membres || 0} membres • Cotisation: {(groupe.montant_cotisation || 0).toLocaleString()} F</p>
                       </div>
-                      <p className="font-bold text-orange-600">{(groupe.solde_total || 0).toLocaleString()} F</p>
+                      <p className="font-bold text-orange-600">{Number(groupe.solde || 0).toLocaleString()} F</p>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
+                      <div
                         className="bg-gradient-to-r from-orange-400 to-orange-600 h-2 rounded-full"
-                        style={{ width: `${Math.min(100, ((groupe.nb_membres || 0) / (groupe.nb_membres || 1)) * 100)}%` }}
+                        style={{
+                          width: `${Math.min(
+                            100,
+                            ((Number(groupe.solde || 0) / (Number(groupe.montant_cotisation || 0) * Math.max(1, groupe.nb_membres || 0))) || 0) * 100
+                          )}%`,
+                        }}
                       />
                     </div>
                   </div>

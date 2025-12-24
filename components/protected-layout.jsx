@@ -1,12 +1,14 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Loader from './loader'
 
 export default function ProtectedLayout({ children }) {
   const router = useRouter()
-  const [isAuthenticated, setIsAuthenticated] = useEffect(() => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+
+  useEffect(() => {
     const token = localStorage.getItem('token')
     if (!token) {
       router.push('/landing')

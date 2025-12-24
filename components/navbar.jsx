@@ -130,7 +130,7 @@ export default function NavBar() {
             </>
           ) : (
             <Link
-              href="/landing"
+              href="/login"
               className="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition"
             >
               Connexion

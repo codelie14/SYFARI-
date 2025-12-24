@@ -27,8 +27,8 @@ export const metadata = {
     images: ['/assets/img/logo-syfari.jpg'],
   },
   icons: {
-    icon: '/favicon.ico',
-    apple: '/apple-touch-icon.png',
+    icon: '/assets/img/logo-syfari.jpg',
+    apple: '/assets/img/logo-syfari.jpg',
   },
 }
 
