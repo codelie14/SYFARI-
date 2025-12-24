@@ -11,14 +11,55 @@ export default function NavBar() {
   const [isOpen, setIsOpen] = useState(false)
   const [isAuth, setIsAuth] = useState(false)
   const [user, setUser] = useState(null)
+  const [isMounted, setIsMounted] = useState(false)
 
-  useEffect(() => {
+  // Check auth status
+  const checkAuthStatus = () => {
     const token = localStorage.getItem('token')
     setIsAuth(!!token)
     if (token) {
-      // Get user data if available
       const userData = localStorage.getItem('user')
-      if (userData) setUser(JSON.parse(userData))
+      if (userData) {
+        try {
+          setUser(JSON.parse(userData))
+        } catch (e) {
+          console.error('Error parsing user data:', e)
+        }
+      }
+    } else {
+      setUser(null)
+    }
+  }
+
+  // Initial mount check
+  useEffect(() => {
+    setIsMounted(true)
+    checkAuthStatus()
+  }, [])
+
+  // Listen to storage changes (from other tabs/windows or redirects)
+  useEffect(() => {
+    const handleStorageChange = () => {
+      checkAuthStatus()
+    }
+
+    // Check auth status when page becomes visible
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        checkAuthStatus()
+      }
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    // Also check periodically (every 2 seconds)
+    const interval = setInterval(checkAuthStatus, 2000)
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      clearInterval(interval)
     }
   }, [])
 

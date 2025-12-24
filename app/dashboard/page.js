@@ -17,20 +17,8 @@ export default function DashboardPage() {
     transactions: 0,
     membres: 0
   })
-
-  const recentTransactions = [
-    { id: 1, groupe: 'Tontine Familiale', montant: 50000, type: 'cotisation', date: '2024-01-15', status: 'completed' },
-    { id: 2, groupe: 'Association des Jeunes', montant: 100000, type: 'tirage', date: '2024-01-14', status: 'completed' },
-    { id: 3, groupe: 'Tontine des Femmes', montant: 25000, type: 'pénalité', date: '2024-01-13', status: 'pending' },
-    { id: 4, groupe: 'Tontine Familiale', montant: 50000, type: 'cotisation', date: '2024-01-12', status: 'completed' },
-    { id: 5, groupe: 'Association des Jeunes', montant: 30000, type: 'remboursement', date: '2024-01-11', status: 'completed' },
-  ]
-
-  const groupes = [
-    { id: 1, nom: 'Tontine Familiale', membres: 12, solde: 500000, cotisation: 50000, progress: 75 },
-    { id: 2, nom: 'Association des Jeunes', membres: 25, solde: 800000, cotisation: 100000, progress: 60 },
-    { id: 3, nom: 'Tontine des Femmes', membres: 8, solde: 300000, cotisation: 25000, progress: 90 },
-  ]
+  const [recentTransactions, setRecentTransactions] = useState([])
+  const [groupes, setGroupes] = useState([])
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -39,17 +27,40 @@ export default function DashboardPage() {
       return
     }
     
-    // Simuler chargement des données
-    setTimeout(() => {
-      setStats({ 
-        groupes: 3, 
-        solde: 1600000, 
-        transactions: 24,
-        membres: 45
-      })
-      setLoading(false)
-    }, 1000)
+    loadData()
   }, [router])
+
+  const loadData = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      const headers = { Authorization: `Bearer ${token}` }
+
+      // Charger les groupes
+      const groupesRes = await fetch('/api/groupes', { headers })
+      const groupesData = groupesRes.ok ? await groupesRes.json() : []
+      setGroupes(groupesData.slice(0, 3))
+
+      // Charger les transactions
+      const transRes = await fetch('/api/transactions', { headers })
+      const transData = transRes.ok ? await transRes.json() : []
+      setRecentTransactions(transData.slice(0, 5))
+
+      // Calculer les stats
+      const totalSolde = groupesData.reduce((sum, g) => sum + (g.solde_total || 0), 0)
+      const totalMembres = groupesData.reduce((sum, g) => sum + (g.nb_membres || 0), 0)
+
+      setStats({
+        groupes: groupesData.length,
+        solde: totalSolde,
+        transactions: transData.length,
+        membres: totalMembres
+      })
+    } catch (error) {
+      console.error('Erreur chargement données:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   if (loading) return <Loader text="Chargement du tableau de bord..." />
 
@@ -124,25 +135,29 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {recentTransactions.map((tx) => (
-                  <div key={tx.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
-                    <div className="flex items-center gap-4">
-                      <div className="text-2xl">{getTransactionIcon(tx.type)}</div>
-                      <div>
-                        <p className="font-semibold text-sm">{tx.groupe}</p>
-                        <p className="text-xs text-gray-500">{tx.date}</p>
+                {recentTransactions.length > 0 ? (
+                  recentTransactions.map((tx) => (
+                    <div key={tx.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                      <div className="flex items-center gap-4">
+                        <div className="text-2xl">{getTransactionIcon(tx.type)}</div>
+                        <div>
+                          <p className="font-semibold text-sm">{tx.groupe_nom || 'Groupe'}</p>
+                          <p className="text-xs text-gray-500">{new Date(tx.date).toLocaleDateString('fr-FR')}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <p className="font-bold text-orange-600">{(tx.montant || 0).toLocaleString()} F</p>
+                          <Badge className={`text-xs ${getStatusColor(tx.statut)}`}>
+                            {tx.statut === 'completed' ? 'Complétée' : 'En attente'}
+                          </Badge>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <p className="font-bold text-orange-600">{tx.montant.toLocaleString()} F</p>
-                        <Badge className={`text-xs ${getStatusColor(tx.status)}`}>
-                          {tx.status === 'completed' ? 'Complétée' : 'En attente'}
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <div className="p-4 text-center text-gray-500">Aucune transaction</div>
+                )}
               </div>
               <Button variant="outline" className="w-full mt-4">
                 Voir toutes les transactions
@@ -202,24 +217,27 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {groupes.map((groupe) => (
-                <div key={groupe.id} className="p-4 border rounded-lg hover:border-orange-200 transition">
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <h3 className="font-semibold">{groupe.nom}</h3>
-                      <p className="text-sm text-gray-600">{groupe.membres} membres • Cotisation: {groupe.cotisation.toLocaleString()} F</p>
+              {groupes.length > 0 ? (
+                groupes.map((groupe) => (
+                  <div key={groupe.id} className="p-4 border rounded-lg hover:border-orange-200 transition">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <h3 className="font-semibold">{groupe.nom}</h3>
+                        <p className="text-sm text-gray-600">{groupe.nb_membres || 0} membres • Cotisation: {(groupe.montant_cotisation || 0).toLocaleString()} F</p>
+                      </div>
+                      <p className="font-bold text-orange-600">{(groupe.solde_total || 0).toLocaleString()} F</p>
                     </div>
-                    <p className="font-bold text-orange-600">{groupe.solde.toLocaleString()} F</p>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-gradient-to-r from-orange-400 to-orange-600 h-2 rounded-full"
+                        style={{ width: `${Math.min(100, ((groupe.nb_membres || 0) / (groupe.nb_membres || 1)) * 100)}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-gradient-to-r from-orange-400 to-orange-600 h-2 rounded-full"
-                      style={{ width: `${groupe.progress}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2">{groupe.progress}% de progression</p>
-                </div>
-              ))}
+                ))
+              ) : (
+                <div className="p-4 text-center text-gray-500">Aucun groupe</div>
+              )}
             </div>
           </CardContent>
         </Card>
